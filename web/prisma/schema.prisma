@@ -10,14 +10,22 @@ datasource db {
   provider = "postgresql"
 }
 
-// ---------- Producción ----------
+// ---------- Equipo interno de Jakiens ----------
+// Ver REQUISITOS.md sección 9 para el porqué de estos tres niveles.
 
-model ProductionUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
+enum StaffTier {
+  FULL           // acceso total: Javier, Aina, Chiara, Mikko, Aitor, Maca
+  LOGISTICS      // sin contabilidad: Pablo, Carmen
+  POSTPRODUCTION // montaje/edición: Malo, Miquel, Lungo
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   name         String
-  createdAt    DateTime @default(now())
+  tier         StaffTier
+  createdAt    DateTime  @default(now())
 }
 
 // ---------- Proyecto ----------
