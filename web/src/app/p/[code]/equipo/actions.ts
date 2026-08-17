@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
 import { getOrCreateActiveToken } from "@/lib/tokens";
 import { buildWaLink, buildWaMessage } from "@/lib/wa";
+import { notifySlack } from "@/lib/slack";
 
 const ALL_PERMISOS = ["Briefing", "Materiales", "Rodaje", "Cierre"];
 
@@ -47,21 +48,34 @@ export async function addMemberAction(formData: FormData) {
     },
   });
 
+  await notifySlack(project.slackWebhookUrl, `Nuevo colaborador añadido a *${project.name}*: ${name} (${role}).`);
+
   revalidatePath(`/p/${code}/equipo`);
 }
 
 export async function toggleConfirmedAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
-  await requireStaffAccess(code, "equipo");
+  const { project } = await requireStaffAccess(code, "equipo");
 
   const memberId = String(formData.get("memberId") ?? "");
-  const member = await db.projectMember.findUnique({ where: { id: memberId } });
+  const member = await db.projectMember.findUnique({
+    where: { id: memberId },
+    include: { person: true },
+  });
   if (!member) return;
 
+  const nowConfirmed = !member.confirmed;
   await db.projectMember.update({
     where: { id: memberId },
-    data: { confirmed: !member.confirmed },
+    data: { confirmed: nowConfirmed },
   });
+
+  if (nowConfirmed) {
+    await notifySlack(
+      project.slackWebhookUrl,
+      `${member.person.name} (${member.role}) ha confirmado su participación en *${project.name}*.`
+    );
+  }
 
   revalidatePath(`/p/${code}/equipo`);
 }
@@ -87,6 +101,30 @@ export async function convocarAction(formData: FormData) {
     ficha
   );
 
+  await notifySlack(
+    project.slackWebhookUrl,
+    `Convocatoria de WhatsApp enviada a ${member.person.name} (${member.role}) en *${project.name}*.`
+  );
+
   revalidatePath(`/p/${code}/equipo`);
   redirect(buildWaLink(member.person.phone, message));
+}
+
+export async function updateSlackWebhookAction(formData: FormData) {
+  const code = String(formData.get("code") ?? "");
+  const { project, staff } = await requireStaffAccess(code, "equipo");
+  if (staff.tier !== "FULL") return;
+
+  const slackWebhookUrl = String(formData.get("slackWebhookUrl") ?? "").trim() || null;
+
+  await db.project.update({
+    where: { id: project.id },
+    data: { slackWebhookUrl },
+  });
+
+  if (slackWebhookUrl) {
+    await notifySlack(slackWebhookUrl, `Este canal queda conectado a la Sala de producción de *${project.name}*.`);
+  }
+
+  revalidatePath(`/p/${code}/equipo`);
 }

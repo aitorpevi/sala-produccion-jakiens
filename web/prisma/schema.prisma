@@ -31,22 +31,25 @@ model StaffUser {
 // ---------- Proyecto ----------
 
 model Project {
-  id         String   @id @default(cuid())
-  code       String   @unique
-  client     String
-  name       String
-  director   String
-  agencia    String
-  shootLabel String
-  location   String
-  format     String
-  createdAt  DateTime @default(now())
+  id              String   @id @default(cuid())
+  code            String   @unique
+  client          String
+  name            String
+  director        String
+  agencia         String
+  shootLabel      String
+  location        String
+  format          String
+  driveFolderUrl  String? // carpeta de Drive con todo el material de postproducción
+  slackWebhookUrl String? // webhook del canal de Slack del proyecto, para notificaciones
+  createdAt       DateTime @default(now())
 
-  phaseStates PhaseState[]
-  members     ProjectMember[]
-  materials   Material[]
-  callSheetDays CallSheetDay[]
-  expenses    Expense[]
+  phaseStates      PhaseState[]
+  members          ProjectMember[]
+  materials        Material[]
+  callSheetDays    CallSheetDay[]
+  expenses         Expense[]
+  materialRequests MaterialRequest[]
 }
 
 model PhaseState {
@@ -172,7 +175,19 @@ model ScheduleItem {
   descripcion    String
 }
 
-// ---------- Cierre (fase 6 — pendiente de credenciales OK Ticket) ----------
+// ---------- Postproducción (fase 6) ----------
+
+model MaterialRequest {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description  String
+  status       String   @default("pendiente") // pendiente | entregado
+  requestedBy  String?
+  createdAt    DateTime @default(now())
+}
+
+// ---------- Cierre (fase 7 — pendiente de credenciales OK Ticket) ----------
 
 model Invoice {
   id              String        @id @default(cuid())

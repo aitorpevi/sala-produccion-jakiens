@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
 import { AppShell, ModHead, StaffViewerLabel } from "@/components/AppShell";
 import { STAFF_PHASE_ACCESS } from "@/lib/phases";
-import { addMemberAction, convocarAction, toggleConfirmedAction } from "./actions";
+import { addMemberAction, convocarAction, toggleConfirmedAction, updateSlackWebhookAction } from "./actions";
 
 const ALL_PERMISOS = ["Briefing", "Materiales", "Rodaje", "Cierre"];
 
@@ -165,6 +165,37 @@ export default async function EquipoPage({
           </div>
         </form>
       </div>
+
+      {staff.tier === "FULL" ? (
+        <div className="panel">
+          <div className="phdr">
+            <h3>Notificaciones a Slack</h3>
+            <span className="tag">{project.slackWebhookUrl ? "Conectado" : "Sin conectar"}</span>
+          </div>
+          <form action={updateSlackWebhookAction} className="alta">
+            <input type="hidden" name="code" value={code} />
+            <div className="fgrid">
+              <div className="field full">
+                <label htmlFor="slackWebhookUrl">Webhook del canal del proyecto</label>
+                <input
+                  id="slackWebhookUrl"
+                  name="slackWebhookUrl"
+                  placeholder="https://hooks.slack.com/services/..."
+                  defaultValue={project.slackWebhookUrl ?? ""}
+                />
+              </div>
+            </div>
+            <div className="form-foot">
+              <span className="hint">
+                Se avisa al canal cuando alguien se confirma, se sube material o hay una petición de postproducción
+              </span>
+              <button className="btn solid" type="submit">
+                Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

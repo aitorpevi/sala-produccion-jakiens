@@ -8,9 +8,9 @@ Estado: borrador v0.1 · basado en el prototipo `intranet-jakiens.html` (chat "A
 - **OK Ticket**: credenciales/documentación de su API.
 - **Gestoría**: plantilla `.xlsx` real de alta de Jakiens + email de envío.
 - **Fecha objetivo**: **lunes 23 de agosto** — el equipo necesita ver avances esa semana. Quedan ~9 días naturales, así que el hito de esa fecha es deliberadamente acotado (ver sección 8).
-- **Equipo interno y permisos**: construido (sección 9) — pendiente solo confirmar si Pablo/Carmen necesitan también Rodaje, y cuándo se construye el contenido real de Postproducción.
-- **Slack**: ¿solo notificaciones automáticas por webhook, integración completa, o no tocarlo por ahora? (sección 10)
-- **WhatsApp de empresa**: confirmar si el número está vinculado como dispositivo multi-sesión en los móviles del equipo interno, o es otro montaje (sección 10).
+- **Equipo interno y permisos**: construido (sección 9), incluyendo Rodaje para Pablo/Carmen y el contenido real de Postproducción.
+- **Slack**: notificaciones por webhook construidas (sección 10) — falta que crees el webhook del canal en Slack y lo pegues en la fase Equipo.
+- **WhatsApp de empresa**: recomendación entregada (sección 10) — confirmar si ya usáis el modo multi-dispositivo o hay que configurarlo.
 
 ## 1. Objetivo
 
@@ -141,27 +141,43 @@ A diferencia de los colaboradores externos (acceso de un solo proyecto, vía enl
 
 | Nivel | Personas | Rol | Ve | No ve |
 |---|---|---|---|---|
-| **Total** | Javier, Aina, Chiara, Mikko, Aitor, Maca | CEO, Contabilidad/Finanzas/Laboral, Producción ejecutiva, Dirección creativa, Producción ejecutiva + admin, Producción y contabilidad de proyectos | Las 6 (o 7) fases completas, cifras de Cierre/facturación, contabilidad agregada | — |
-| **Parcial · Logística y creativo** | Pablo, Carmen | Producer/localizador; logística | Materiales (documentación creativa), Equipo (contacto y logística con colaboradores), presupuestos **individuales** por colaborador (para negociar tarifas) | Cierre/facturación y contabilidad agregada del proyecto |
-| **Parcial · Postproducción** | Malo, Miquel, Lungo | Montaje/edición, IA | Documentos de Preproducción, la fase de Postproducción (propuesta, ver más abajo), necesidades de formato | El resto |
+| **Total** | Javier, Aina, Chiara, Mikko, Aitor, Maca | CEO, Contabilidad/Finanzas/Laboral, Producción ejecutiva, Dirección creativa, Producción ejecutiva + admin, Producción y contabilidad de proyectos | Las 7 fases completas, cifras de Cierre/facturación, contabilidad agregada | — |
+| **Parcial · Logística y creativo** | Pablo, Carmen | Producer/localizador; logística | Equipo, Preproducción, Materiales y Rodaje; presupuestos **individuales** por colaborador (para negociar tarifas) | Altas, Postproducción, Cierre/facturación y contabilidad agregada |
+| **Parcial · Postproducción** | Malo, Miquel, Lungo | Montaje/edición, IA | Preproducción (deciden ahí junto a Mikko, el realizador y el DOP en distintas fases del proceso), Materiales y Postproducción | El resto |
 
 **Estado**: construido y probado (2026-08-16) con las 11 personas del equipo interno + Aitor, cada una con su propio login y su nivel real aplicado tanto en el menú de fases como en el servidor (si alguien entra a una URL de una fase sin acceso, se le redirige a su primera fase permitida — no es solo ocultar el botón).
 
 - `ProductionUser` → `StaffUser`, con un campo `tier` (`FULL` / `LOGISTICS` / `POSTPRODUCTION`). Login con email + contraseña igual que antes, ahora una cuenta por persona.
-- El nivel "Parcial · Logística" (Pablo, Carmen) tiene acceso a Equipo, Preproducción y Materiales — incluye ver los presupuestos individuales (para negociar tarifas), pero no Altas, Rodaje, Postproducción ni Cierre. **Nota**: me ceñí de forma literal a lo que describiste; si en la práctica un producer/localizador necesita también Rodaje, dilo y lo añado — de momento por defecto no se lo doy para no pasarme.
-- El nivel "Parcial · Postproducción" (Malo, Miquel, Lungo) tiene acceso a Preproducción, Materiales y la nueva fase de Postproducción; nada más.
-- **Postproducción ya existe como fase 6ª** (Cierre pasa a ser la 7ª). De momento es un placeholder "Próximamente" — aún no tiene contenido propio (entregables, enlaces de revisión, specs de formato); eso se construye cuando toque.
+- **Postproducción ya existe como fase 6ª y tiene contenido real** (Cierre pasa a ser la 7ª): un enlace a la carpeta de Drive del proyecto (editable por quien tenga acceso a la fase) y un listado de peticiones de material con estado pendiente/entregado — cualquiera con acceso puede añadir una petición o marcarla como entregada.
 - Credenciales temporales generadas por el seed — email de cada persona en `nombre@jakiens.com`, contraseña `jakiens-<nombre>-26`. Cámbialas antes de dar acceso real (ver `web/README.md`).
 
 ## 10. Arquitectura de comunicación (Slack + WhatsApp)
 
-Hoy conviven dos canales fuera de la intranet:
-- **Slack** (equipo interno): un canal por proyecto con distintos niveles de información, mantenido a mano.
-- **WhatsApp** (colaboradores externos, ~70% del equipo de cada proyecto): desde un número de empresa compartido, vinculado a los móviles del equipo interno.
+### Slack — construido
 
-**Planteamiento**: la intranet no debería intentar sustituir ninguno de los dos — sustituir el hábito de comunicación de todo un equipo es el camino con más fricción y más lento de adoptar. Mejor que la intranet sea la **fuente de verdad** y ambos canales se alimenten de ella:
+Cada proyecto tiene un campo `slackWebhookUrl` (editable desde la fase Equipo, solo visible para el nivel `FULL`). En cuanto se rellena con la URL de un webhook de entrada de Slack, la intranet avisa automáticamente al canal del proyecto cuando:
+- se añade un colaborador nuevo,
+- alguien confirma su participación,
+- se envía una convocatoria por WhatsApp,
+- se sube un material (por producción o por un colaborador),
+- se crea o se marca como entregada una petición de material en Postproducción.
 
-- **Slack**: en vez de actualizar el canal a mano, la intranet puede enviar automáticamente notificaciones al canal del proyecto cuando pasa algo relevante (colaborador confirmado, factura recibida, material subido, alta enviada a gestoría...) mediante un **webhook de entrada por proyecto** (se configura un webhook en Slack por canal, sin necesidad de una app/bot completa). Es la opción con mejor relación esfuerzo/beneficio; una integración bidireccional completa (comandos desde Slack, sincronización en ambos sentidos) es mucho más trabajo de construir y mantener, y no parece necesaria para resolver el problema real (evitar duplicar la actualización manual).
-- **WhatsApp**: si el número de empresa está añadido como **dispositivo vinculado** (multi-dispositivo) en los móviles del equipo interno, el flujo de "Convocar" que ya existe en la fase Equipo debería encajar sin cambios — cualquiera del equipo pulsa el botón desde su propio móvil, el mensaje sale identificado como el número de empresa, y la conversación queda visible en todos los dispositivos vinculados. Falta confirmar que ese es realmente el montaje actual antes de darlo por bueno.
+Para conectarlo a un canal real: en Slack, crear una **Incoming Webhook** para el canal del proyecto (Slack → Configuración del canal → Integraciones → Webhooks, o app "Incoming Webhooks" desde el directorio de apps de Slack), copiar la URL (`https://hooks.slack.com/services/...`) y pegarla en el panel "Notificaciones a Slack" de la fase Equipo. Si falla el envío (URL mal puesta, canal borrado...), no rompe la acción del usuario — simplemente no llega el aviso.
 
-Pendiente de tu confirmación en ambos puntos antes de tocar el modelo de datos o el roadmap.
+No construí sincronización bidireccional (comandos desde Slack, etc.) porque no resuelve un problema real aquí — el objetivo era dejar de actualizar el canal a mano, y con el webhook ya queda cubierto.
+
+### WhatsApp — recomendación
+
+Para que **todo el equipo interno (~11-12 personas)** pueda escribir manualmente desde el mismo número de empresa (sin automatizar ni usar plantillas, que es justo vuestro caso de uso):
+
+**Recomendado: WhatsApp Business (la app gratuita) con dispositivos vinculados.**
+- Comprad una SIM/línea dedicada para "Jakiens" que no esté ya asociada a otra cuenta de WhatsApp (personal o de empresa) — cada número solo puede tener una cuenta.
+- Instalad WhatsApp Business en un móvil "principal", completad el perfil de empresa (nombre, categoría, descripción, web, horario).
+- Desde ese móvil, usad **Dispositivos vinculados** para añadir hasta **4 dispositivos más** (total 5, incluyendo el principal) — cualquier persona con un dispositivo vinculado puede leer y escribir como ese mismo número, y todas ven la misma conversación.
+- Coste: básicamente el de la línea (línea de datos/voz en España, unos 5-15 €/mes) — la app y el uso normal son gratis.
+- Límite real: solo 5 sesiones simultáneas. Si más de 5 personas necesitan enviar mensajes *a la vez* como Jakiens (no solo consultar), esto se queda corto — pero para que uno o dos de producción convoquen colaboradores en cada momento, sobra.
+- Requisito técnico: el móvil principal tiene que conectarse a internet al menos una vez cada 14 días o los dispositivos vinculados se desconectan.
+
+**Si en algún momento necesitáis más de 5 personas a la vez, o automatizar envíos**: la alternativa es la WhatsApp Business Platform (API de Meta) combinada con una bandeja compartida tipo **Chatwoot** (gratis si se autoaloja) o **360dialog** (~40-50 €/mes) — pero esto exige verificar la empresa en Meta Business Manager (puede tardar semanas) y es una capa de infraestructura adicional que no hace falta para el caso de uso que describes. Herramientas más orientadas a marketing masivo (Wati, Respond.io, Zoko, 50-160+ €/mes) son claramente más de lo que necesitáis.
+
+El flujo de "Convocar" que ya existe en la fase Equipo (enlace `wa.me` abierto desde el propio móvil de quien lo pulsa) encaja sin ningún cambio con la opción recomendada — en cuanto deis de alta el número con dispositivos vinculados, ya funciona.

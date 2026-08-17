@@ -54,12 +54,9 @@ export const STAFF_TIER_LABEL: Record<StaffTier, string> = {
   POSTPRODUCTION: "Postproducción",
 };
 
-// Lectura literal de lo que pediste para cada nivel — si Pablo/Carmen también
-// necesitan Rodaje en la práctica (muy plausible para un producer/localizador),
-// dímelo y lo añado; de momento me ciño a lo descrito para no dar de más.
 export const STAFF_PHASE_ACCESS: Record<StaffTier, PhaseKey[]> = {
   FULL: PHASES.map((p) => p.key),
-  LOGISTICS: ["equipo", "prepro", "materiales"],
+  LOGISTICS: ["equipo", "prepro", "materiales", "rodaje"],
   POSTPRODUCTION: ["prepro", "materiales", "postpro"],
 };
 

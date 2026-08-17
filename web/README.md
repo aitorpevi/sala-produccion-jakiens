@@ -15,7 +15,7 @@ npm run dev
 Abre http://localhost:3000 — cada persona del equipo interno tiene su propio login (email `nombre@jakiens.com`, contraseña temporal `jakiens-<nombre>-26`, ej. `aitor@jakiens.com` / `jakiens-aitor-26`). El seed crea las 11 cuentas con su nivel:
 
 - **FULL** (acceso total): Javier, Aina, Chiara, Mikko, Aitor, Maca.
-- **LOGISTICS** (sin Altas/Rodaje/Postproducción/Cierre): Pablo, Carmen.
+- **LOGISTICS** (Equipo, Preproducción, Materiales y Rodaje; sin Altas/Postproducción/Cierre): Pablo, Carmen.
 - **POSTPRODUCTION** (solo Preproducción, Materiales y Postproducción): Malo, Miquel, Lungo.
 
 Son contraseñas temporales — hay que cambiarlas a mano en la tabla `StaffUser` (o construir una pantalla de cambio de contraseña) antes de repartir accesos de verdad.
@@ -26,8 +26,10 @@ Son contraseñas temporales — hay que cambiarlas a mano en la tabla `StaffUser
 - **Preproducción**: briefing, presupuesto y necesidades por perfil (fechas quedan de momento en texto fijo del proyecto de ejemplo).
 - **Materiales**: subida y descarga de archivos reales (guardados en `storage/uploads/`, fuera de `public/` y con comprobación de permisos en la descarga).
 - **Acceso de colaborador**: enlace de un solo uso por proyecto+persona (`/f/[token]`), sin contraseña, con caducidad de 45 días.
-- **Altas laborales / Rodaje / Postproducción / Cierre**: solo placeholders ("Próximamente") — Altas y Cierre dependen de la plantilla real y las credenciales de OK Ticket (ver REQUISITOS.md); Postproducción es una fase nueva sin contenido propio todavía.
+- **Altas laborales / Rodaje / Cierre**: solo placeholders ("Próximamente") — dependen de la plantilla real y las credenciales de OK Ticket (ver REQUISITOS.md).
+- **Postproducción**: enlace a la carpeta de Drive del proyecto (editable) + listado de peticiones de material con estado pendiente/entregado.
 - **Permisos del equipo interno**: cada fase comprueba en el servidor si el `tier` del usuario tiene acceso — no es solo ocultar el enlace, entrar directamente a una URL sin permiso redirige a la primera fase permitida.
+- **Notificaciones a Slack**: cada proyecto puede tener un webhook de Slack (configurable desde la fase Equipo, solo nivel `FULL`); avisa al canal cuando se confirma un colaborador, se convoca, se sube material o hay novedades en Postproducción.
 
 ## Variables de entorno (`.env`, no versionado)
 
