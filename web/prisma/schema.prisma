@@ -1,0 +1,189 @@
+// Sala de Producción · Jakiens — modelo de datos
+// Ver REQUISITOS.md sección 4 para el diseño funcional detrás de este esquema.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Producción ----------
+
+model ProductionUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
+// ---------- Proyecto ----------
+
+model Project {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  client     String
+  name       String
+  director   String
+  agencia    String
+  shootLabel String
+  location   String
+  format     String
+  createdAt  DateTime @default(now())
+
+  phaseStates PhaseState[]
+  members     ProjectMember[]
+  materials   Material[]
+  callSheetDays CallSheetDay[]
+  expenses    Expense[]
+}
+
+model PhaseState {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key       String // equipo | prepro | materiales | altas | rodaje | cierre
+  state     String // done | live | next
+
+  @@unique([projectId, key])
+}
+
+// ---------- Personas ----------
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  initials  String
+  createdAt DateTime @default(now())
+
+  memberships ProjectMember[]
+}
+
+model ProjectMember {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  personId      String
+  person        Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role          String // perfil: Realizador, DOP, Food Stylist...
+  rate          Int // honorarios netos por jornada
+  dias          Int
+  confirmed     Boolean  @default(false)
+  requiereAlta  Boolean  @default(false)
+  permisos      String[] // ["Briefing","Materiales","Rodaje","Cierre"]
+  callTime      String?
+  brief         String?  @db.Text
+
+  accessTokens  AccessToken[]
+  materialTargets MaterialTarget[]
+  altaLaboral   AltaLaboral?
+  invoice       Invoice?
+
+  @@unique([projectId, personId])
+}
+
+model AccessToken {
+  id              String        @id @default(cuid())
+  projectMemberId String
+  projectMember   ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  token           String        @unique
+  expiresAt       DateTime
+  createdAt       DateTime      @default(now())
+}
+
+// ---------- Materiales ----------
+
+model Material {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name       String
+  ext        String
+  sizeLabel  String?
+  version    String?
+  direction  String // "in" (descarga colaborador) | "out" (sube colaborador)
+  filePath   String? // ruta en disco/almacenamiento cuando ya se ha subido
+  uploadedAt DateTime @default(now())
+
+  targets MaterialTarget[]
+}
+
+model MaterialTarget {
+  id              String        @id @default(cuid())
+  materialId      String
+  material        Material      @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  projectMemberId String
+  projectMember   ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, projectMemberId])
+}
+
+// ---------- Altas laborales (fase 4 — pendiente de plantilla real) ----------
+
+model AltaLaboral {
+  id                String        @id @default(cuid())
+  projectMemberId    String        @unique
+  projectMember      ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  dni                String?
+  naf                String?
+  domicilio          String?
+  iban               String?
+  irpf               String?
+  fechaAlta          String?
+  fechaBaja          String?
+  estado             String        @default("pendiente") // pendiente | recibida
+  sentToGestoriaAt   DateTime?
+}
+
+// ---------- Rodaje (fase 5) ----------
+
+model CallSheetDay {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fecha         String
+  localizacion  String?
+  primeraHora   String?
+  amanecer      String?
+  ocaso         String?
+  meteo         String?
+
+  scheduleItems ScheduleItem[]
+}
+
+model ScheduleItem {
+  id             String       @id @default(cuid())
+  callSheetDayId String
+  callSheetDay   CallSheetDay @relation(fields: [callSheetDayId], references: [id], onDelete: Cascade)
+  hora           String
+  descripcion    String
+}
+
+// ---------- Cierre (fase 6 — pendiente de credenciales OK Ticket) ----------
+
+model Invoice {
+  id              String        @id @default(cuid())
+  projectMemberId String        @unique
+  projectMember   ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  concept         String
+  amount          Int
+  state           String        @default("pendiente") // pendiente | recibida
+  filePath        String?
+  receivedAt      DateTime?
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  source     String   @default("ok_ticket")
+  externalId String?
+  concept    String
+  amount     Int
+  syncedAt   DateTime @default(now())
+}
