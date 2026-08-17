@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireProductionProject } from "@/lib/access";
+import { requireStaffAccess } from "@/lib/access";
 import { saveUploadedFile, humanFileSize } from "@/lib/storage";
 
 export async function uploadMaterialAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
-  const project = await requireProductionProject(code);
+  const { project } = await requireStaffAccess(code, "materiales");
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return;

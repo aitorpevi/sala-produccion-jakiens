@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { PHASES, PHASE_STATE, type PhaseKey } from "@/lib/phases";
+import type { StaffTier } from "@/generated/prisma/enums";
+import { PHASES, PHASE_STATE, STAFF_TIER_LABEL, type PhaseKey } from "@/lib/phases";
+import { logoutAction } from "@/app/actions";
 
 type Project = {
   client: string;
@@ -127,6 +129,21 @@ export function ComingSoon({ step, title }: { step: string; title: string }) {
         <span className="em-mono">Próximamente</span>
         Esta fase todavía no está conectada — llega en la siguiente iteración.
       </div>
+    </>
+  );
+}
+
+export function StaffViewerLabel({ staff }: { staff: { name: string; tier: StaffTier } }) {
+  return (
+    <>
+      <span className="tag">
+        {staff.name} · {STAFF_TIER_LABEL[staff.tier]}
+      </span>
+      <form action={logoutAction}>
+        <button className="btn ghost" type="submit">
+          Salir
+        </button>
+      </form>
     </>
   );
 }

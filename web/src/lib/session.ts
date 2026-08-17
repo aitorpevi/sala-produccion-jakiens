@@ -11,7 +11,7 @@ function secretKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function createProductionSession(userId: string) {
+export async function createStaffSession(userId: string) {
   const token = await new SignJWT({ sub: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -28,12 +28,12 @@ export async function createProductionSession(userId: string) {
   });
 }
 
-export async function destroyProductionSession() {
+export async function destroyStaffSession() {
   const store = await cookies();
   store.delete(COOKIE_NAME);
 }
 
-export async function getProductionUserId(): Promise<string | null> {
+export async function getStaffUserId(): Promise<string | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;

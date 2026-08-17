@@ -7,15 +7,18 @@ Next.js 16 + PostgreSQL (Prisma 7) + TypeScript. Ver [../REQUISITOS.md](../REQUI
 ```bash
 npm install
 npx prisma dev -d          # Postgres local de Prisma, sin Docker
-npx prisma migrate dev     # crea las tablas
-npx prisma db seed         # carga el proyecto de ejemplo (CHB-2607)
+npx prisma db push         # crea las tablas (el historial de migraciones aún no está consolidado)
+npx prisma db seed         # carga el proyecto de ejemplo (CHB-2607) y el equipo interno
 npm run dev
 ```
 
-Abre http://localhost:3000 — entra como producción con:
+Abre http://localhost:3000 — cada persona del equipo interno tiene su propio login (email `nombre@jakiens.com`, contraseña temporal `jakiens-<nombre>-26`, ej. `aitor@jakiens.com` / `jakiens-aitor-26`). El seed crea las 11 cuentas con su nivel:
 
-- **Email**: `aitor@jakiens.com`
-- **Contraseña**: `cambia-esta-clave-2026` (temporal — cámbiala a mano en la tabla `ProductionUser` o añade una pantalla de cambio de contraseña antes de compartir el acceso)
+- **FULL** (acceso total): Javier, Aina, Chiara, Mikko, Aitor, Maca.
+- **LOGISTICS** (sin Altas/Rodaje/Postproducción/Cierre): Pablo, Carmen.
+- **POSTPRODUCTION** (solo Preproducción, Materiales y Postproducción): Malo, Miquel, Lungo.
+
+Son contraseñas temporales — hay que cambiarlas a mano en la tabla `StaffUser` (o construir una pantalla de cambio de contraseña) antes de repartir accesos de verdad.
 
 ## Qué hay conectado de verdad
 
@@ -23,7 +26,8 @@ Abre http://localhost:3000 — entra como producción con:
 - **Preproducción**: briefing, presupuesto y necesidades por perfil (fechas quedan de momento en texto fijo del proyecto de ejemplo).
 - **Materiales**: subida y descarga de archivos reales (guardados en `storage/uploads/`, fuera de `public/` y con comprobación de permisos en la descarga).
 - **Acceso de colaborador**: enlace de un solo uso por proyecto+persona (`/f/[token]`), sin contraseña, con caducidad de 45 días.
-- **Altas laborales / Rodaje / Cierre**: solo placeholders ("Próximamente") — dependen de la plantilla de alta real, el email de gestoría y las credenciales de OK Ticket (ver REQUISITOS.md).
+- **Altas laborales / Rodaje / Postproducción / Cierre**: solo placeholders ("Próximamente") — Altas y Cierre dependen de la plantilla real y las credenciales de OK Ticket (ver REQUISITOS.md); Postproducción es una fase nueva sin contenido propio todavía.
+- **Permisos del equipo interno**: cada fase comprueba en el servidor si el `tier` del usuario tiene acceso — no es solo ocultar el enlace, entrar directamente a una URL sin permiso redirige a la primera fase permitida.
 
 ## Variables de entorno (`.env`, no versionado)
 

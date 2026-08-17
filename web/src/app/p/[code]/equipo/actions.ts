@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireProductionProject } from "@/lib/access";
+import { requireStaffAccess } from "@/lib/access";
 import { getOrCreateActiveToken } from "@/lib/tokens";
 import { buildWaLink, buildWaMessage } from "@/lib/wa";
 
@@ -11,7 +11,7 @@ const ALL_PERMISOS = ["Briefing", "Materiales", "Rodaje", "Cierre"];
 
 export async function addMemberAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
-  const project = await requireProductionProject(code);
+  const { project } = await requireStaffAccess(code, "equipo");
 
   const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim();
@@ -52,7 +52,7 @@ export async function addMemberAction(formData: FormData) {
 
 export async function toggleConfirmedAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
-  await requireProductionProject(code);
+  await requireStaffAccess(code, "equipo");
 
   const memberId = String(formData.get("memberId") ?? "");
   const member = await db.projectMember.findUnique({ where: { id: memberId } });
@@ -68,7 +68,7 @@ export async function toggleConfirmedAction(formData: FormData) {
 
 export async function convocarAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
-  const project = await requireProductionProject(code);
+  const { project } = await requireStaffAccess(code, "equipo");
 
   const memberId = String(formData.get("memberId") ?? "");
   const member = await db.projectMember.findUnique({

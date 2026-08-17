@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
-import { requireProductionProject } from "@/lib/access";
-import { AppShell, ModHead } from "@/components/AppShell";
-import { PHASES } from "@/lib/phases";
-import { logoutAction } from "@/app/actions";
+import { requireStaffAccess } from "@/lib/access";
+import { AppShell, ModHead, StaffViewerLabel } from "@/components/AppShell";
+import { STAFF_PHASE_ACCESS } from "@/lib/phases";
 import { addMemberAction, convocarAction, toggleConfirmedAction } from "./actions";
 
 const ALL_PERMISOS = ["Briefing", "Materiales", "Rodaje", "Cierre"];
@@ -13,7 +12,7 @@ export default async function EquipoPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const project = await requireProductionProject(code);
+  const { project, staff } = await requireStaffAccess(code, "equipo");
 
   const members = await db.projectMember.findMany({
     where: { projectId: project.id },
@@ -26,17 +25,8 @@ export default async function EquipoPage({
       project={project}
       basePath={`/p/${project.code}`}
       currentPhase="equipo"
-      allowedPhases={PHASES.map((p) => p.key)}
-      viewerLabel={
-        <>
-          <span className="tag">Producción</span>
-          <form action={logoutAction}>
-            <button className="btn ghost" type="submit">
-              Salir
-            </button>
-          </form>
-        </>
-      }
+      allowedPhases={STAFF_PHASE_ACCESS[staff.tier]}
+      viewerLabel={<StaffViewerLabel staff={staff} />}
     >
       <ModHead
         step="01"

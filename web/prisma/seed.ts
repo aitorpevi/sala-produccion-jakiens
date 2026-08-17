@@ -148,18 +148,41 @@ const MATERIALS = [
   },
 ];
 
+const STAFF: { name: string; email: string; tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION" }[] = [
+  { name: "Javier", email: "javier@jakiens.com", tier: "FULL" },
+  { name: "Aina", email: "aina@jakiens.com", tier: "FULL" },
+  { name: "Chiara", email: "chiara@jakiens.com", tier: "FULL" },
+  { name: "Mikko", email: "mikko@jakiens.com", tier: "FULL" },
+  { name: "Aitor", email: "aitor@jakiens.com", tier: "FULL" },
+  { name: "Maca", email: "maca@jakiens.com", tier: "FULL" },
+  { name: "Pablo", email: "pablo@jakiens.com", tier: "LOGISTICS" },
+  { name: "Carmen", email: "carmen@jakiens.com", tier: "LOGISTICS" },
+  { name: "Malo", email: "malo@jakiens.com", tier: "POSTPRODUCTION" },
+  { name: "Miquel", email: "miquel@jakiens.com", tier: "POSTPRODUCTION" },
+  { name: "Lungo", email: "lungo@jakiens.com", tier: "POSTPRODUCTION" },
+];
+
+function tempPasswordFor(name: string) {
+  return `jakiens-${name.toLowerCase()}-26`;
+}
+
 async function main() {
-  const productionEmail = "aitor@jakiens.com";
-  const tempPassword = "cambia-esta-clave-2026";
-  await db.productionUser.upsert({
-    where: { email: productionEmail },
-    update: {},
-    create: {
-      email: productionEmail,
-      name: "Aitor",
-      passwordHash: await bcrypt.hash(tempPassword, 10),
-    },
-  });
+  const staffCredentials: { email: string; password: string }[] = [];
+
+  for (const s of STAFF) {
+    const tempPassword = tempPasswordFor(s.name);
+    await db.staffUser.upsert({
+      where: { email: s.email },
+      update: { name: s.name, tier: s.tier },
+      create: {
+        email: s.email,
+        name: s.name,
+        tier: s.tier,
+        passwordHash: await bcrypt.hash(tempPassword, 10),
+      },
+    });
+    staffCredentials.push({ email: s.email, password: tempPassword });
+  }
 
   const project = await db.project.upsert({
     where: { code: PROJECT.code },
@@ -174,6 +197,7 @@ async function main() {
       { projectId: project.id, key: "materiales", state: "live" },
       { projectId: project.id, key: "altas", state: "live" },
       { projectId: project.id, key: "rodaje", state: "next" },
+      { projectId: project.id, key: "postpro", state: "next" },
       { projectId: project.id, key: "cierre", state: "next" },
     ],
     skipDuplicates: true,
@@ -249,7 +273,10 @@ async function main() {
 
   console.log("Seed completado.");
   console.log(`Proyecto: ${project.code}`);
-  console.log(`Producción -> email: ${productionEmail} · password temporal: ${tempPassword}`);
+  console.log("Equipo interno (email · password temporal):");
+  for (const c of staffCredentials) {
+    console.log(`  ${c.email} · ${c.password}`);
+  }
 }
 
 main()

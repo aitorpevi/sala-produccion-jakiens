@@ -8,7 +8,7 @@ Estado: borrador v0.1 · basado en el prototipo `intranet-jakiens.html` (chat "A
 - **OK Ticket**: credenciales/documentación de su API.
 - **Gestoría**: plantilla `.xlsx` real de alta de Jakiens + email de envío.
 - **Fecha objetivo**: **lunes 23 de agosto** — el equipo necesita ver avances esa semana. Quedan ~9 días naturales, así que el hito de esa fecha es deliberadamente acotado (ver sección 8).
-- **Equipo interno y permisos** (sección 9, nueva): ¿entra en el hito del 23/08 o se construye después? ¿Confirmamos añadir Postproducción como fase 7ª?
+- **Equipo interno y permisos**: construido (sección 9) — pendiente solo confirmar si Pablo/Carmen necesitan también Rodaje, y cuándo se construye el contenido real de Postproducción.
 - **Slack**: ¿solo notificaciones automáticas por webhook, integración completa, o no tocarlo por ahora? (sección 10)
 - **WhatsApp de empresa**: confirmar si el número está vinculado como dispositivo multi-sesión en los móviles del equipo interno, o es otro montaje (sección 10).
 
@@ -135,7 +135,7 @@ Objetivo: **lunes 23/08** el equipo ve avances reales, no el prototipo estático
 
 **Cómo ayudar a no bloquear lo anterior**: en paralelo a que yo desarrolle, sería útil que fueras reuniendo la plantilla de alta de Jakiens y las credenciales de OK Ticket, así en cuanto volváis de vacaciones esas dos fases se pueden enchufar sin esperar.
 
-## 9. Equipo interno y permisos (propuesta — pendiente de confirmar)
+## 9. Equipo interno y permisos (construido)
 
 A diferencia de los colaboradores externos (acceso de un solo proyecto, vía enlace mágico), el equipo interno de Jakiens necesita **cuentas propias, activas en todos los proyectos**, con tres niveles de acceso:
 
@@ -145,10 +145,13 @@ A diferencia de los colaboradores externos (acceso de un solo proyecto, vía enl
 | **Parcial · Logística y creativo** | Pablo, Carmen | Producer/localizador; logística | Materiales (documentación creativa), Equipo (contacto y logística con colaboradores), presupuestos **individuales** por colaborador (para negociar tarifas) | Cierre/facturación y contabilidad agregada del proyecto |
 | **Parcial · Postproducción** | Malo, Miquel, Lungo | Montaje/edición, IA | Documentos de Preproducción, la fase de Postproducción (propuesta, ver más abajo), necesidades de formato | El resto |
 
-**Implicaciones técnicas** (no construidas todavía — depende de tu respuesta sobre si entra en el hito del 23/08):
-- Pasar de un `ProductionUser` único a una tabla de usuarios internos reales, cada uno con email/contraseña propios y un `tier` (o permisos granulares por fase, reutilizando el mismo mecanismo `permisos[]` que ya existe para colaboradores).
-- El nivel "Parcial · Logística" necesita una distinción nueva que hoy no existe: acceso a **presupuestos individuales** (tarifa de un colaborador concreto, para negociar) sin acceso a la **contabilidad agregada** (Cierre). Ahora mismo `Preproducción` y `Cierre` ya están separados como fases distintas, así que esta distinción encaja de forma natural sin rediseñar el modelo.
-- **Postproducción no existe como fase** en el modelo actual (que cubre preproducción → rodaje → cierre). Lo que necesita el equipo de montaje (documentos de preproducción + "información de postproducción" + necesidades de formato) apunta a una fase 7ª nueva — entregables, enlaces de revisión de montaje, especificaciones de formato/exportación. Si confirmas que sí, la añado al modelo de datos y al phase-strip.
+**Estado**: construido y probado (2026-08-16) con las 11 personas del equipo interno + Aitor, cada una con su propio login y su nivel real aplicado tanto en el menú de fases como en el servidor (si alguien entra a una URL de una fase sin acceso, se le redirige a su primera fase permitida — no es solo ocultar el botón).
+
+- `ProductionUser` → `StaffUser`, con un campo `tier` (`FULL` / `LOGISTICS` / `POSTPRODUCTION`). Login con email + contraseña igual que antes, ahora una cuenta por persona.
+- El nivel "Parcial · Logística" (Pablo, Carmen) tiene acceso a Equipo, Preproducción y Materiales — incluye ver los presupuestos individuales (para negociar tarifas), pero no Altas, Rodaje, Postproducción ni Cierre. **Nota**: me ceñí de forma literal a lo que describiste; si en la práctica un producer/localizador necesita también Rodaje, dilo y lo añado — de momento por defecto no se lo doy para no pasarme.
+- El nivel "Parcial · Postproducción" (Malo, Miquel, Lungo) tiene acceso a Preproducción, Materiales y la nueva fase de Postproducción; nada más.
+- **Postproducción ya existe como fase 6ª** (Cierre pasa a ser la 7ª). De momento es un placeholder "Próximamente" — aún no tiene contenido propio (entregables, enlaces de revisión, specs de formato); eso se construye cuando toque.
+- Credenciales temporales generadas por el seed — email de cada persona en `nombre@jakiens.com`, contraseña `jakiens-<nombre>-26`. Cámbialas antes de dar acceso real (ver `web/README.md`).
 
 ## 10. Arquitectura de comunicación (Slack + WhatsApp)
 

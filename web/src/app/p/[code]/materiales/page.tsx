@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
-import { requireProductionProject } from "@/lib/access";
-import { AppShell, ModHead } from "@/components/AppShell";
-import { PHASES } from "@/lib/phases";
-import { logoutAction } from "@/app/actions";
+import { requireStaffAccess } from "@/lib/access";
+import { AppShell, ModHead, StaffViewerLabel } from "@/components/AppShell";
+import { STAFF_PHASE_ACCESS } from "@/lib/phases";
 import { uploadMaterialAction } from "./actions";
 
 export default async function MaterialesPage({
@@ -11,7 +10,7 @@ export default async function MaterialesPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const project = await requireProductionProject(code);
+  const { project, staff } = await requireStaffAccess(code, "materiales");
 
   const [materials, members] = await Promise.all([
     db.material.findMany({
@@ -30,17 +29,8 @@ export default async function MaterialesPage({
       project={project}
       basePath={`/p/${project.code}`}
       currentPhase="materiales"
-      allowedPhases={PHASES.map((p) => p.key)}
-      viewerLabel={
-        <>
-          <span className="tag">Producción</span>
-          <form action={logoutAction}>
-            <button className="btn ghost" type="submit">
-              Salir
-            </button>
-          </form>
-        </>
-      }
+      allowedPhases={STAFF_PHASE_ACCESS[staff.tier]}
+      viewerLabel={<StaffViewerLabel staff={staff} />}
     >
       <ModHead
         step="03"

@@ -1,10 +1,13 @@
+import type { StaffTier } from "@/generated/prisma/enums";
+
 export const PHASES = [
   { key: "equipo", n: "01", label: "Equipo" },
   { key: "prepro", n: "02", label: "Preproducción" },
   { key: "materiales", n: "03", label: "Materiales" },
   { key: "altas", n: "04", label: "Altas laborales" },
   { key: "rodaje", n: "05", label: "Rodaje" },
-  { key: "cierre", n: "06", label: "Cierre" },
+  { key: "postpro", n: "06", label: "Postproducción" },
+  { key: "cierre", n: "07", label: "Cierre" },
 ] as const;
 
 export type PhaseKey = (typeof PHASES)[number]["key"];
@@ -18,6 +21,7 @@ export const PHASE_STATE: Record<PhaseKey, "done" | "live" | "next"> = {
   materiales: "live",
   altas: "live",
   rodaje: "next",
+  postpro: "next",
   cierre: "next",
 };
 
@@ -32,7 +36,7 @@ export function phaseAllowedForMember(
   member: { permisos: string[]; requiereAlta: boolean },
   key: PhaseKey
 ) {
-  if (key === "equipo") return false; // el roster es solo de producción
+  if (key === "equipo" || key === "postpro") return false; // fases solo de equipo interno
   if (key === "altas") return member.requiereAlta;
   const needed = Object.keys(PERM_TO_PHASE).find((k) => PERM_TO_PHASE[k] === key);
   return needed ? member.permisos.includes(needed) : false;
@@ -40,4 +44,29 @@ export function phaseAllowedForMember(
 
 export function firstAllowedPhase(member: { permisos: string[]; requiereAlta: boolean }) {
   return PHASES.map((p) => p.key).find((k) => phaseAllowedForMember(member, k)) ?? "prepro";
+}
+
+// ---------- Equipo interno: acceso por nivel (ver REQUISITOS.md sección 9) ----------
+
+export const STAFF_TIER_LABEL: Record<StaffTier, string> = {
+  FULL: "Acceso total",
+  LOGISTICS: "Logística y creativo",
+  POSTPRODUCTION: "Postproducción",
+};
+
+// Lectura literal de lo que pediste para cada nivel — si Pablo/Carmen también
+// necesitan Rodaje en la práctica (muy plausible para un producer/localizador),
+// dímelo y lo añado; de momento me ciño a lo descrito para no dar de más.
+export const STAFF_PHASE_ACCESS: Record<StaffTier, PhaseKey[]> = {
+  FULL: PHASES.map((p) => p.key),
+  LOGISTICS: ["equipo", "prepro", "materiales"],
+  POSTPRODUCTION: ["prepro", "materiales", "postpro"],
+};
+
+export function staffPhaseAllowed(tier: StaffTier, key: PhaseKey) {
+  return STAFF_PHASE_ACCESS[tier].includes(key);
+}
+
+export function firstAllowedPhaseForStaff(tier: StaffTier): PhaseKey {
+  return PHASES.map((p) => p.key).find((k) => staffPhaseAllowed(tier, k)) ?? "prepro";
 }

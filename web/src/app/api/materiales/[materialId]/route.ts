@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { getProductionUserId } from "@/lib/session";
+import { getStaffUserId } from "@/lib/session";
 import { resolveAccessToken } from "@/lib/tokens";
 import { readUploadedFile } from "@/lib/storage";
 
@@ -25,7 +25,7 @@ export async function GET(
     const member = await resolveAccessToken(token);
     authorized = !!member && material.targets.some((t) => t.projectMemberId === member.id);
   } else {
-    authorized = !!(await getProductionUserId());
+    authorized = !!(await getStaffUserId());
   }
 
   if (!authorized) {
