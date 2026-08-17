@@ -1,12 +1,16 @@
+-- CreateEnum
+CREATE TYPE "StaffTier" AS ENUM ('FULL', 'LOGISTICS', 'POSTPRODUCTION');
+
 -- CreateTable
-CREATE TABLE "ProductionUser" (
+CREATE TABLE "StaffUser" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "tier" "StaffTier" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ProductionUser_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "StaffUser_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -20,6 +24,8 @@ CREATE TABLE "Project" (
     "shootLabel" TEXT NOT NULL,
     "location" TEXT NOT NULL,
     "format" TEXT NOT NULL,
+    "driveFolderUrl" TEXT,
+    "slackWebhookUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
@@ -141,6 +147,18 @@ CREATE TABLE "ScheduleItem" (
 );
 
 -- CreateTable
+CREATE TABLE "MaterialRequest" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pendiente',
+    "requestedBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MaterialRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Invoice" (
     "id" TEXT NOT NULL,
     "projectMemberId" TEXT NOT NULL,
@@ -167,7 +185,7 @@ CREATE TABLE "Expense" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProductionUser_email_key" ON "ProductionUser"("email");
+CREATE UNIQUE INDEX "StaffUser_email_key" ON "StaffUser"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Project_code_key" ON "Project"("code");
@@ -219,6 +237,9 @@ ALTER TABLE "CallSheetDay" ADD CONSTRAINT "CallSheetDay_projectId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "ScheduleItem" ADD CONSTRAINT "ScheduleItem_callSheetDayId_fkey" FOREIGN KEY ("callSheetDayId") REFERENCES "CallSheetDay"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MaterialRequest" ADD CONSTRAINT "MaterialRequest_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_projectMemberId_fkey" FOREIGN KEY ("projectMemberId") REFERENCES "ProjectMember"("id") ON DELETE CASCADE ON UPDATE CASCADE;
