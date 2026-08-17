@@ -41,10 +41,10 @@ export function AppShell({
   return (
     <div className="shell">
       <header className="top">
-        <div className="brand">
+        <Link href="/p" className="brand">
           <span className="wordmark">Jakiens</span>
           <span className="sub">Sala de producción</span>
-        </div>
+        </Link>
         <div className="viewer">{viewerLabel}</div>
       </header>
 

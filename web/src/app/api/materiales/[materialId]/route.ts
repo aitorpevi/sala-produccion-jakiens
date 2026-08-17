@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getStaffUserId } from "@/lib/session";
 import { resolveAccessToken } from "@/lib/tokens";
-import { readUploadedFile } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,
@@ -14,7 +13,7 @@ export async function GET(
     include: { targets: true },
   });
 
-  if (!material || !material.filePath) {
+  if (!material || !material.fileData) {
     return new Response("No encontrado", { status: 404 });
   }
 
@@ -32,10 +31,9 @@ export async function GET(
     return new Response("No autorizado", { status: 403 });
   }
 
-  const buffer = await readUploadedFile(material.filePath);
   const safeName = material.name.replace(/[^a-zA-Z0-9._ -]/g, "_");
 
-  return new Response(new Uint8Array(buffer), {
+  return new Response(new Uint8Array(material.fileData), {
     headers: {
       "Content-Type": "application/octet-stream",
       "Content-Disposition": `attachment; filename="${safeName}.${material.ext.toLowerCase()}"`,

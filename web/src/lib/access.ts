@@ -28,6 +28,12 @@ export async function requireStaffAccess(code: string, phase: PhaseKey) {
   return { project, staff };
 }
 
+export async function requireStaffTier(allowedTiers: StaffTier[]) {
+  const staff = await requireStaff();
+  if (!allowedTiers.includes(staff.tier)) redirect("/p");
+  return staff;
+}
+
 export async function requireMemberByToken(token: string) {
   const member = await resolveAccessToken(token);
   if (!member) notFound();

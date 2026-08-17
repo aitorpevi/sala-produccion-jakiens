@@ -15,6 +15,14 @@ export default async function CollaboratorMaterialesPage({
 
   const materials = await db.material.findMany({
     where: { targets: { some: { projectMemberId: member.id } } },
+    select: {
+      id: true,
+      name: true,
+      ext: true,
+      sizeLabel: true,
+      direction: true,
+      fileName: true,
+    },
     orderBy: { uploadedAt: "desc" },
   });
 
@@ -51,7 +59,7 @@ export default async function CollaboratorMaterialesPage({
               <div className="fd">{m.sizeLabel ?? "—"}</div>
             </div>
             {m.direction === "in" ? (
-              m.filePath ? (
+              m.fileName ? (
                 <a className="btn" href={`/api/materiales/${m.id}?token=${token}`}>
                   Descargar
                 </a>
@@ -60,7 +68,7 @@ export default async function CollaboratorMaterialesPage({
                   <span className="s-dot"></span>Sin subir
                 </span>
               )
-            ) : m.filePath ? (
+            ) : m.fileName ? (
               <a className="btn ghost" href={`/api/materiales/${m.id}?token=${token}`}>
                 Ver subido
               </a>

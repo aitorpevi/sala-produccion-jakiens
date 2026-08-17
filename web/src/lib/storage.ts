@@ -1,9 +1,4 @@
 import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import crypto from "node:crypto";
-
-const STORAGE_ROOT = path.join(process.cwd(), "storage", "uploads");
 
 export function humanFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -17,15 +12,11 @@ export function humanFileSize(bytes: number) {
   return `${size.toFixed(1).replace(".0", "")} ${units[i]}`;
 }
 
-export async function saveUploadedFile(file: File, projectId: string) {
-  await fs.mkdir(path.join(STORAGE_ROOT, projectId), { recursive: true });
+// Los archivos se guardan como bytes en Postgres, no en disco: el filesystem de
+// Vercel es de solo lectura en producción salvo /tmp (efímero y no compartido
+// entre invocaciones), así que un guardado en disco local no sobrevive.
+export async function readFileAsBuffer(file: File) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const relPath = path.join(projectId, `${crypto.randomUUID()}-${safeName}`);
   const buffer = Buffer.from(await file.arrayBuffer());
-  await fs.writeFile(path.join(STORAGE_ROOT, relPath), buffer);
-  return { relPath, size: buffer.byteLength };
-}
-
-export async function readUploadedFile(relPath: string) {
-  return fs.readFile(path.join(STORAGE_ROOT, relPath));
+  return { buffer, fileName: safeName, size: buffer.byteLength };
 }

@@ -20,6 +20,10 @@ export default async function EquipoPage({
     orderBy: { rate: "desc" },
   });
 
+  const memberPersonIds = new Set(members.map((m) => m.personId));
+  const directory = await db.person.findMany({ orderBy: { name: "asc" } });
+  const availableFromDirectory = directory.filter((p) => !memberPersonIds.has(p.id));
+
   return (
     <AppShell
       project={project}
@@ -110,16 +114,28 @@ export default async function EquipoPage({
         <form action={addMemberAction} className="alta">
           <input type="hidden" name="code" value={code} />
           <div className="fgrid">
+            <div className="field full">
+              <label htmlFor="existingPersonId">Del directorio de colaboradores</label>
+              <select id="existingPersonId" name="existingPersonId" defaultValue="">
+                <option value="">— Nuevo colaborador (rellenar nombre y teléfono abajo) —</option>
+                {availableFromDirectory.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.phone ? ` · ${p.phone}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="field">
-              <label htmlFor="name">Nombre y apellidos</label>
-              <input id="name" name="name" required />
+              <label htmlFor="name">Nombre y apellidos (si es nuevo)</label>
+              <input id="name" name="name" />
             </div>
             <div className="field">
               <label htmlFor="role">Perfil / rol</label>
               <input id="role" name="role" placeholder="Ej. DOP, Food Stylist..." required />
             </div>
             <div className="field">
-              <label htmlFor="phone">Teléfono (WhatsApp)</label>
+              <label htmlFor="phone">Teléfono (WhatsApp, si es nuevo)</label>
               <input id="phone" name="phone" placeholder="+34600000000" />
             </div>
             <div className="field">
@@ -129,6 +145,10 @@ export default async function EquipoPage({
             <div className="field">
               <label htmlFor="dias">Jornadas</label>
               <input id="dias" name="dias" type="number" min={1} defaultValue={1} />
+            </div>
+            <div className="field">
+              <label htmlFor="presupuestoGasto">Presupuesto de gasto de la partida (€)</label>
+              <input id="presupuestoGasto" name="presupuestoGasto" type="number" min={0} defaultValue={0} />
             </div>
             <div className="field">
               <label>Requiere alta en Seguridad Social</label>

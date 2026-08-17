@@ -19,7 +19,8 @@ export default async function PreproPage({
     orderBy: { rate: "desc" },
   });
 
-  const total = members.reduce((s, m) => s + m.rate * m.dias, 0);
+  const totalHonorarios = members.reduce((s, m) => s + m.rate * m.dias, 0);
+  const totalGasto = members.reduce((s, m) => s + m.presupuestoGasto, 0);
 
   return (
     <AppShell
@@ -66,23 +67,25 @@ export default async function PreproPage({
           </div>
           <div className="kv">
             <span className="k">Preproducción</span>
-            <span className="v mono">14–23 JUL</span>
+            <span className="v mono">
+              {project.preproInicio ?? "—"}
+              {project.preproFin ? `–${project.preproFin}` : ""}
+            </span>
           </div>
           <div className="kv">
-            <span className="k">Rodaje J1 · Estudio</span>
-            <span className="v mono">24 JUL</span>
-          </div>
-          <div className="kv">
-            <span className="k">Rodaje J2 · Set gastro</span>
-            <span className="v mono">25 JUL</span>
+            <span className="k">Rodaje</span>
+            <span className="v mono">
+              {project.rodajeInicio ?? "—"}
+              {project.rodajeFin ? `–${project.rodajeFin}` : ""}
+            </span>
           </div>
           <div className="kv">
             <span className="k">Entrega de material</span>
-            <span className="v mono">26 JUL</span>
+            <span className="v mono">{project.entregaMaterial ?? "—"}</span>
           </div>
           <div className="kv">
             <span className="k">1ª entrega montaje</span>
-            <span className="v mono">04 AGO</span>
+            <span className="v mono">{project.primeraEntregaMontaje ?? "—"}</span>
           </div>
         </div>
         <div className="panel">
@@ -111,7 +114,7 @@ export default async function PreproPage({
       <div className="panel">
         <div className="phdr">
           <h3>Presupuesto asignado por perfil</h3>
-          <span className="tag">Honorarios netos</span>
+          <span className="tag">Honorarios + gasto de materiales</span>
         </div>
         {members.map((m) => (
           <div className="kv" key={m.id}>
@@ -120,12 +123,21 @@ export default async function PreproPage({
             </span>
             <span className="v mono">
               {eur(m.rate)} × {m.dias}j = {eur(m.rate * m.dias)}
+              {m.presupuestoGasto > 0 ? ` + ${eur(m.presupuestoGasto)} gasto` : ""}
             </span>
           </div>
         ))}
         <div className="bud-total">
-          <span className="lbl">Total equipo</span>
-          <span className="amt">{eur(total)}</span>
+          <span className="lbl">Total honorarios</span>
+          <span className="amt">{eur(totalHonorarios)}</span>
+        </div>
+        <div className="bud-total">
+          <span className="lbl">Total gasto de materiales</span>
+          <span className="amt">{eur(totalGasto)}</span>
+        </div>
+        <div className="bud-total">
+          <span className="lbl">Total proyecto</span>
+          <span className="amt">{eur(totalHonorarios + totalGasto)}</span>
         </div>
       </div>
     </AppShell>

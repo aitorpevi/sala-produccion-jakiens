@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
-import { saveUploadedFile, humanFileSize } from "@/lib/storage";
+import { readFileAsBuffer, humanFileSize } from "@/lib/storage";
 import { notifySlack } from "@/lib/slack";
 
 export async function uploadMaterialAction(formData: FormData) {
@@ -16,7 +16,7 @@ export async function uploadMaterialAction(formData: FormData) {
   const direction = String(formData.get("direction") ?? "in");
   const memberIds = formData.getAll("targetIds").map(String);
 
-  const { relPath, size } = await saveUploadedFile(file, project.id);
+  const { buffer, fileName, size } = await readFileAsBuffer(file);
   const ext = (file.name.split(".").pop() ?? "").toUpperCase() || "FILE";
   const name = String(formData.get("name") ?? file.name).trim() || file.name;
 
@@ -27,7 +27,8 @@ export async function uploadMaterialAction(formData: FormData) {
       ext,
       sizeLabel: humanFileSize(size),
       direction,
-      filePath: relPath,
+      fileData: buffer,
+      fileName,
     },
   });
 

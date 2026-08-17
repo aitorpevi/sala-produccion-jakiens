@@ -36,10 +36,18 @@ model Project {
   client          String
   name            String
   director        String
-  agencia         String
+  agencia          String
   shootLabel      String
   location        String
   format          String
+  status          String   @default("activo") // activo | cerrado
+  // Fechas clave del kickoff — texto libre (igual que el resto de fechas de la app), no Date real.
+  preproInicio        String?
+  preproFin           String?
+  rodajeInicio        String?
+  rodajeFin           String?
+  entregaMaterial     String?
+  primeraEntregaMontaje String?
   driveFolderUrl  String? // carpeta de Drive con todo el material de postproducción
   slackWebhookUrl String? // webhook del canal de Slack del proyecto, para notificaciones
   createdAt       DateTime @default(now())
@@ -70,6 +78,14 @@ model Person {
   phone     String?
   email     String?
   initials  String
+  // Datos fiscales — viven en la persona, no en cada alta de proyecto, para no volver
+  // a pedirlos cada vez que un colaborador repite en un proyecto nuevo.
+  dni       String?
+  naf       String?
+  domicilio String?
+  iban      String?
+  irpf      String?
+  okTicketId String? // para cuando lleguen las credenciales de la API de OK Ticket
   createdAt DateTime @default(now())
 
   memberships ProjectMember[]
@@ -81,9 +97,10 @@ model ProjectMember {
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   personId      String
   person        Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
-  role          String // perfil: Realizador, DOP, Food Stylist...
-  rate          Int // honorarios netos por jornada
-  dias          Int
+  role             String // perfil: Realizador, DOP, Food Stylist...
+  rate             Int // honorarios netos por jornada
+  dias             Int
+  presupuestoGasto Int @default(0) // presupuesto de gasto de materiales de la partida, aparte de los honorarios
   confirmed     Boolean  @default(false)
   requiereAlta  Boolean  @default(false)
   permisos      String[] // ["Briefing","Materiales","Rodaje","Cierre"]
@@ -118,7 +135,8 @@ model Material {
   sizeLabel  String?
   version    String?
   direction  String // "in" (descarga colaborador) | "out" (sube colaborador)
-  filePath   String? // ruta en disco/almacenamiento cuando ya se ha subido
+  fileData   Bytes? // contenido del archivo — en la propia BD, no en disco (Vercel no tiene disco persistente)
+  fileName   String? // nombre de archivo original, para el Content-Disposition al descargar
   uploadedAt DateTime @default(now())
 
   targets MaterialTarget[]
@@ -137,18 +155,15 @@ model MaterialTarget {
 // ---------- Altas laborales (fase 4 — pendiente de plantilla real) ----------
 
 model AltaLaboral {
-  id                String        @id @default(cuid())
-  projectMemberId    String        @unique
-  projectMember      ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
-  dni                String?
-  naf                String?
-  domicilio          String?
-  iban               String?
-  irpf               String?
-  fechaAlta          String?
-  fechaBaja          String?
-  estado             String        @default("pendiente") // pendiente | recibida
-  sentToGestoriaAt   DateTime?
+  id               String        @id @default(cuid())
+  projectMemberId  String        @unique
+  projectMember    ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  // Los datos fiscales (DNI, NAF, IBAN, domicilio, IRPF) viven en Person — aquí solo
+  // lo específico de este alta en concreto.
+  fechaAlta        String?
+  fechaBaja        String?
+  estado           String        @default("pendiente") // pendiente | recibida
+  sentToGestoriaAt DateTime?
 }
 
 // ---------- Rodaje (fase 5) ----------

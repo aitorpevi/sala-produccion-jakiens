@@ -42,10 +42,6 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# archivos subidos localmente (fase Materiales)
-/storage/uploads/*
-!/storage/uploads/.gitkeep
-
 # docs de skills para agentes IA, autogeneradas por `prisma init`
 /.agents/
 /.claude/

@@ -4,13 +4,14 @@ Estado: borrador v0.1 · basado en el prototipo `intranet-jakiens.html` (chat "A
 
 ## Pendiente de confirmar
 
-- **Hosting de `jakiens.com`**: por DNS (nameservers `ui-dns.*`, IP en rango IONOS) y cabeceras (WordPress + Apache) todo apunta a un **hosting compartido de IONOS**, no un VPS con Node/Docker. No bloqueamos el arranque por esto: la app nueva se despliega en una plataforma aparte (Vercel/Render) y `worktool.jakiens.com` apunta ahí vía CNAME en el DNS de IONOS, sin tocar el WordPress existente. Si más adelante confirmas que en realidad es un VPS con acceso root, se puede migrar el despliegue allí sin cambiar el stack.
-- **OK Ticket**: credenciales/documentación de su API.
-- **Gestoría**: plantilla `.xlsx` real de alta de Jakiens + email de envío.
-- **Fecha objetivo**: **lunes 23 de agosto** — el equipo necesita ver avances esa semana. Quedan ~9 días naturales, así que el hito de esa fecha es deliberadamente acotado (ver sección 8).
-- **Equipo interno y permisos**: construido (sección 9), incluyendo Rodaje para Pablo/Carmen y el contenido real de Postproducción.
-- **Slack**: notificaciones por webhook construidas (sección 10) — falta que crees el webhook del canal en Slack y lo pegues en la fase Equipo.
+- **`worktool.jakiens.com`**: de momento la app vive en `sala-produccion-jakiens.vercel.app` (decisión tuya, ver sección 7) — mover el CNAME cuando queráis.
+- **OK Ticket**: credenciales/documentación de su API — bloquea la fase Cierre y el campo `okTicketId` del directorio de colaboradores (ya preparado en el modelo, sin conectar).
+- **Gestoría**: plantilla `.xlsx` real de alta de Jakiens + email de envío — bloquea la fase Altas laborales.
+- **Fecha objetivo**: **lunes 23 de agosto**.
+- **Equipo interno y permisos**: construido (sección 9).
+- **Slack**: notificaciones por webhook construidas (sección 10) — falta que crees el webhook del canal en Slack y lo pegues en la fase Equipo de cada proyecto.
 - **WhatsApp de empresa**: recomendación entregada (sección 10) — confirmar si ya usáis el modo multi-dispositivo o hay que configurarlo.
+- **Alta de proyecto y directorio de colaboradores**: construido (sección 11).
 
 ## 1. Objetivo
 
@@ -101,17 +102,16 @@ Expense        (project_id, source: "ok_ticket", external_id, concept, amount, s
 - **Backups**: copias diarias de la base de datos (hay datos de facturación y nómina).
 - **Entornos**: al menos dev y producción; staging deseable antes de dar acceso al equipo completo.
 
-## 7. Stack técnico (a confirmar con el tipo de hosting)
+## 7. Stack técnico (construido y desplegado)
 
-Si el hosting soporta Node.js/Docker (VPS):
-- **Frontend + backend**: Next.js (React) — reutiliza directamente la lógica del prototipo (mismo lenguaje, misma estructura de datos), API routes o servicio Node/Express separado.
-- **Base de datos**: PostgreSQL + Prisma como ORM.
-- **Autenticación**: NextAuth (o similar) para producción; tokens propios de un solo uso/expiración para colaboradores.
-- **Envío de email**: Resend o SMTP del propio hosting.
-- **Almacenamiento de archivos**: si el disco del VPS no tiene backup gestionado, usar un bucket S3-compatible barato (Cloudflare R2 / Backblaze B2) en vez de guardar solo en local.
-- **Despliegue**: Docker + Nginx como reverse proxy en el subdominio `worktool.jakiens.com`, o PM2 si se prefiere sin contenedores.
+- **Frontend + backend**: Next.js 16 (App Router, Turbopack) + TypeScript.
+- **Base de datos**: PostgreSQL gestionado por **Prisma Postgres** (región Europa/París), vía Prisma 7 con driver adapter (`@prisma/adapter-pg`).
+- **Autenticación**: sesión propia con JWT firmado (`jose`) para el equipo interno (email + contraseña, bcrypt); tokens de un solo uso/expiración (45 días) para colaboradores externos.
+- **Almacenamiento de archivos**: disco local del servidor por ahora (`storage/uploads/`) — pendiente mover a un bucket S3-compatible (Cloudflare R2 / Backblaze B2) si el volumen de archivos crece, ya que el filesystem de Vercel no es persistente entre despliegues.
+- **Despliegue**: Vercel, desplegando desde GitHub (`aitorpevi/sala-produccion-jakiens`, rama `main`) — cada push a `main` despliega automáticamente. URL actual: **https://sala-produccion-jakiens.vercel.app** (pendiente mover a `worktool.jakiens.com` vía CNAME en IONOS cuando se decida).
+- **Notificaciones**: webhook de Slack por proyecto (sin dependencias externas, solo `fetch`).
 
-Si el hosting es compartido (solo PHP/MySQL vía cPanel/Plesk), el stack cambia (ej. Laravel + Livewire/Inertia, MySQL) y habría que reescribir el prototipo en PHP en vez de reutilizar el JS actual — por eso es la pregunta más urgente a resolver.
+`jakiens.com` sigue en hosting compartido de IONOS (WordPress) — no se ha tocado, la app nueva vive en Vercel de forma independiente, tal como se planteó.
 
 ## 8. Roadmap hacia el lunes 23 de agosto
 
@@ -181,3 +181,32 @@ Para que **todo el equipo interno (~11-12 personas)** pueda escribir manualmente
 **Si en algún momento necesitáis más de 5 personas a la vez, o automatizar envíos**: la alternativa es la WhatsApp Business Platform (API de Meta) combinada con una bandeja compartida tipo **Chatwoot** (gratis si se autoaloja) o **360dialog** (~40-50 €/mes) — pero esto exige verificar la empresa en Meta Business Manager (puede tardar semanas) y es una capa de infraestructura adicional que no hace falta para el caso de uso que describes. Herramientas más orientadas a marketing masivo (Wati, Respond.io, Zoko, 50-160+ €/mes) son claramente más de lo que necesitáis.
 
 El flujo de "Convocar" que ya existe en la fase Equipo (enlace `wa.me` abierto desde el propio móvil de quien lo pulsa) encaja sin ningún cambio con la opción recomendada — en cuanto deis de alta el número con dispositivos vinculados, ya funciona.
+
+## 11. Alta de proyecto y directorio de colaboradores (construido)
+
+### Selector y alta de proyecto (`/p`, `/p/nuevo`)
+
+Al entrar, cualquier persona del equipo interno ve el listado de proyectos activos (y, aparte, los cerrados). Solo el nivel **Total** ve el botón "+ Nuevo proyecto", porque activar un proyecto es la decisión de kickoff tras ganarlo en firme. El alta recoge, pensado a través de las 7 fases:
+
+- **Núcleo** (usado en todas las fases): cliente, nombre, código (`Project.code`, único), realizador, agencia, localización, formato.
+- **Preproducción**: fechas de inicio/fin de preproducción, inicio/fin de rodaje, entrega de material, 1ª entrega de montaje — antes estaban fijas como texto en el prototipo; ahora son datos reales del proyecto y se leen en la fase Preproducción.
+- **Postproducción**: enlace a la carpeta de Drive (opcional en el alta, editable después).
+- **Comunicación**: webhook de Slack (opcional en el alta, editable después desde Equipo).
+- **Equipo, Materiales, Altas, Rodaje, Cierre**: no necesitan nada en el alta — se rellenan según avanza el proyecto.
+
+El proyecto arranca con la fase Equipo en estado "en curso" y el resto en "próxima". Un campo `status` (`activo` | `cerrado`) evita que la lista crezca sin fin — de momento no hay un botón para cerrar un proyecto (la fase Cierre sigue siendo un placeholder), se añadirá cuando se construya esa fase.
+
+**Supuesto que hice**: cualquier nivel de acceso ve todos los proyectos activos, sin asignación de "quién trabaja en cada proyecto" — el nivel decide qué ve *dentro* de un proyecto, no si puede entrar. Si en la práctica hace falta restringir por proyecto (ej. que Malo no vea un proyecto en el que no participa), hay que añadirlo.
+
+### Directorio de colaboradores (`/colaboradores`)
+
+Antes, cada alta de colaborador en la fase Equipo creaba una persona nueva en la base de datos, aunque ya hubiera trabajado antes con Jakiens — con lo cual sus datos fiscales había que volver a pedirlos en cada proyecto. Ahora:
+
+- `Person` (la identidad — nombre, teléfono, email, DNI, NAF, domicilio, IBAN, IRPF) vive independiente de `ProjectMember` (el contrato de ESE proyecto — rol, tarifa, jornadas, presupuesto de gasto, permisos). Un mismo colaborador puede tener historial en varios proyectos con condiciones distintas cada vez, pero sus datos fiscales son los mismos en todos.
+- Al añadir a alguien a un proyecto (fase Equipo), el formulario ofrece un desplegable con todo el directorio — si la persona ya existe, se reutiliza; si no, se crea nueva. Probado con dos proyectos reales: añadir al mismo colaborador al segundo proyecto no duplica nada, y su ficha muestra el historial de ambos.
+- Ficha de colaborador (`/colaboradores/[id]`, niveles Total y Logística): edición de contacto y datos fiscales + historial de proyectos en los que ha participado.
+- Campo `okTicketId` ya preparado en el modelo (sin conectar, a la espera de credenciales) para cuando haya que vincular cada persona con su cuenta de OK Ticket.
+
+### Presupuesto de gasto por partida
+
+Cada partida del equipo (`ProjectMember`) tiene ahora dos números independientes: **honorarios** (`rate × dias`, lo ya existente) y **presupuesto de gasto** (`presupuestoGasto`, nuevo) — para partidas como Arte, Vestuario o Gaffer/material eléctrico, donde hay un coste de materiales aparte de pagar a la persona. Se captura al añadir el colaborador al proyecto y se ve reflejado en el panel de presupuesto de Preproducción, con el total de honorarios, el total de gasto de materiales, y el total combinado, por separado.

@@ -14,41 +14,61 @@ export async function addMemberAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
   const { project } = await requireStaffAccess(code, "equipo");
 
-  const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim() || null;
   const rate = Number(formData.get("rate") ?? 0);
   const dias = Number(formData.get("dias") ?? 1);
+  const presupuestoGasto = Number(formData.get("presupuestoGasto") ?? 0);
   const requiereAlta = formData.get("requiereAlta") === "on";
   const permisos = ALL_PERMISOS.filter((p) => formData.get(`perm_${p}`) === "on");
 
-  if (!name || !role) return;
+  if (!role) return;
 
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const existingPersonId = String(formData.get("existingPersonId") ?? "").trim();
+  let personId: string;
+  let personName: string;
 
-  const person = await db.person.create({
-    data: { name, phone, initials },
-  });
+  if (existingPersonId) {
+    const existing = await db.person.findUnique({ where: { id: existingPersonId } });
+    if (!existing) return;
+    personId = existing.id;
+    personName = existing.name;
+  } else {
+    const name = String(formData.get("name") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim() || null;
+    if (!name) return;
+
+    const initials = name
+      .split(" ")
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+
+    const person = await db.person.create({
+      data: { name, phone, initials },
+    });
+    personId = person.id;
+    personName = person.name;
+  }
 
   await db.projectMember.create({
     data: {
       projectId: project.id,
-      personId: person.id,
+      personId,
       role,
       rate: Number.isFinite(rate) ? rate : 0,
       dias: Number.isFinite(dias) && dias > 0 ? dias : 1,
+      presupuestoGasto: Number.isFinite(presupuestoGasto) ? presupuestoGasto : 0,
       requiereAlta,
       permisos,
     },
   });
 
-  await notifySlack(project.slackWebhookUrl, `Nuevo colaborador añadido a *${project.name}*: ${name} (${role}).`);
+  await notifySlack(
+    project.slackWebhookUrl,
+    `Nuevo colaborador añadido a *${project.name}*: ${personName} (${role}).`
+  );
 
   revalidatePath(`/p/${code}/equipo`);
 }

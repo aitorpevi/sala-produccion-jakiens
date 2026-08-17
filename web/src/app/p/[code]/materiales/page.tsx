@@ -15,7 +15,15 @@ export default async function MaterialesPage({
   const [materials, members] = await Promise.all([
     db.material.findMany({
       where: { projectId: project.id },
-      include: { targets: { include: { projectMember: { include: { person: true } } } } },
+      select: {
+        id: true,
+        name: true,
+        ext: true,
+        sizeLabel: true,
+        direction: true,
+        fileName: true,
+        targets: { include: { projectMember: { include: { person: true } } } },
+      },
       orderBy: { uploadedAt: "desc" },
     }),
     db.projectMember.findMany({
@@ -53,7 +61,7 @@ export default async function MaterialesPage({
                 {m.targets.map((t) => t.projectMember.person.name).join(", ") || "sin destinatarios"}
               </div>
             </div>
-            {m.filePath ? (
+            {m.fileName ? (
               <a className="btn" href={`/api/materiales/${m.id}`}>
                 Descargar
               </a>

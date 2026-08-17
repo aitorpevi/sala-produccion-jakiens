@@ -110,9 +110,15 @@ export default async function CollaboratorPreproPage({
           <span className="v mono">{member.dias}</span>
         </div>
         <div className="bud-total">
-          <span className="lbl">Total acordado</span>
+          <span className="lbl">Total honorarios</span>
           <span className="amt">{eur(member.rate * member.dias)}</span>
         </div>
+        {member.presupuestoGasto > 0 ? (
+          <div className="kv">
+            <span className="k">Presupuesto de gasto de tu partida</span>
+            <span className="v mono">{eur(member.presupuestoGasto)}</span>
+          </div>
+        ) : null}
       </div>
     </AppShell>
   );
