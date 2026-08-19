@@ -41,6 +41,10 @@ model Project {
   location        String
   format          String
   status          String   @default("activo") // activo | cerrado
+  // Marca que produce. Jakiens y Ricorico comparten fisco, equipo y directorio de
+  // colaboradores: lo que cambia es la escala del proyecto, las plantillas y el
+  // discurso comercial, no los datos. Por eso es un campo, no una base separada.
+  brand           String   @default("JAKIENS") // JAKIENS | RICORICO
   // Fechas clave del kickoff — texto libre (igual que el resto de fechas de la app), no Date real.
   preproInicio        String?
   preproFin           String?
@@ -48,6 +52,11 @@ model Project {
   rodajeFin           String?
   entregaMaterial     String?
   primeraEntregaMontaje String?
+  // Identidad visual de la vista de cliente. El logo de Jakiens/Ricorico sale de
+  // `brand` y es fijo; estos tres cambian en cada proyecto.
+  portadaUrl      String? // imagen de portada: frame del animatic, moodboard, foto de loca...
+  logoClienteUrl  String?
+  logoAgenciaUrl  String?
   driveFolderUrl  String? // carpeta de Drive con todo el material de postproducción
   slackWebhookUrl String? // webhook del canal de Slack del proyecto, para notificaciones
   createdAt       DateTime @default(now())
@@ -56,6 +65,9 @@ model Project {
   members          ProjectMember[]
   materials        Material[]
   callSheetDays    CallSheetDay[]
+  clientAccesses   ClientAccess[]
+  necesidades      Necesidad[]
+  puestosPrevistos PuestoPrevisto[]
   expenses         Expense[]
   materialRequests MaterialRequest[]
 }
@@ -85,6 +97,9 @@ model Person {
   domicilio String?
   iban      String?
   irpf      String?
+  sexo      String? // "M" | "F" — lo pide la hoja de alta de la gestoría
+  fechaNacimiento String? // texto libre, igual que el resto de fechas de la app
+  categoria String? // categoría/función habitual (la del Índice); el rol real por proyecto vive en ProjectMember
   okTicketId String? // para cuando lleguen las credenciales de la API de OK Ticket
   createdAt DateTime @default(now())
 
@@ -103,14 +118,31 @@ model ProjectMember {
   presupuestoGasto Int @default(0) // presupuesto de gasto de materiales de la partida, aparte de los honorarios
   confirmed     Boolean  @default(false)
   requiereAlta  Boolean  @default(false)
+  /// Gente de casa (Jakiens/Ricorico) frente a colaboradores y subcontratados.
+  /// Al equipo propio no se le imputa coste por proyecto: va en nómina, y
+  /// meterlo en el presupuesto del rodaje falsea lo que cuesta producirlo.
+  esEquipoCore  Boolean  @default(false)
+  // Determina en qué hoja del Excel de la gestoría entra: EQUIPO TÉCNICO (crew)
+  // o EQUIPO ARTÍSTICO (cast). Son dos tablas con columnas distintas.
+  tipoEquipo    String   @default("tecnico") // tecnico | artistico
   permisos      String[] // ["Briefing","Materiales","Rodaje","Cierre"]
   callTime      String?
   brief         String?  @db.Text
+  /// Restricciones alimentarias para el catering.
+  ///
+  /// CATEGORÍA ESPECIAL (art. 9 RGPD): son datos de salud. Por eso se piden por
+  /// proyecto y no se guardan de forma permanente en Person, van cifradas, y el
+  /// cliente solo las ve agregadas y sin nombres ("2 sin gluten, 1 vegano").
+  /// Producción sí las ve con nombre: alguien tiene que saber quién no puede
+  /// comer qué.
+  restriccionesAlimentarias String?
 
   accessTokens  AccessToken[]
   materialTargets MaterialTarget[]
   altaLaboral   AltaLaboral?
   invoice       Invoice?
+  callTimes     CallTime[]
+  necesidades   Necesidad[]
 
   @@unique([projectId, personId])
 }
@@ -124,6 +156,29 @@ model AccessToken {
   createdAt       DateTime      @default(now())
 }
 
+/**
+ * Acceso de cliente y agencia a la orden de rodaje.
+ *
+ * Son dos enlaces distintos aunque enseñen lo mismo: permite revocar el de la
+ * agencia sin cortarle el acceso al cliente, y saber cuál de los dos se ha
+ * abierto. No hay login: es un enlace largo con caducidad, como el de
+ * colaborador, porque pedirle una cuenta al cliente sería una barrera absurda
+ * para un documento que solo sirve unos días.
+ */
+model ClientAccess {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  tipo       String   // cliente | agencia
+  etiqueta   String?  // "Marta, de McCann" — para saber a quién se le dio
+  expiresAt  DateTime
+  lastSeenAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+}
+
 // ---------- Materiales ----------
 
 model Material {
@@ -135,7 +190,17 @@ model Material {
   sizeLabel  String?
   version    String?
   direction  String // "in" (descarga colaborador) | "out" (sube colaborador)
-  fileData   Bytes? // contenido del archivo — en la propia BD, no en disco (Vercel no tiene disco persistente)
+  /// Un material puede ser un archivo subido o un enlace a la nube. Buena parte
+  /// del trabajo vive en Drive o Dropbox en colaborativo, y subir una copia
+  /// significaría trabajar sobre una versión congelada mientras la buena sigue
+  /// cambiando fuera.
+  linkUrl    String?
+  // Los archivos nuevos van a Vercel Blob y aquí queda su URL. `fileData` se
+  // conserva para los que se subieron antes, cuando el contenido vivía en la
+  // propia base de datos: al descargar se mira primero la URL y, si no hay,
+  // los bytes. Así no hay que migrar nada a mano.
+  fileUrl    String?
+  fileData   Bytes?
   fileName   String? // nombre de archivo original, para el Content-Disposition al descargar
   uploadedAt DateTime @default(now())
 
@@ -162,8 +227,60 @@ model AltaLaboral {
   // lo específico de este alta en concreto.
   fechaAlta        String?
   fechaBaja        String?
+  // Importes que la gestoría necesita y que no salen del directorio: se pactan
+  // por proyecto. `salarioSesion` solo aplica a equipo artístico (cast).
+  importeBruto     Int?
+  salarioSesion    Int?
   estado           String        @default("pendiente") // pendiente | recibida
   sentToGestoriaAt DateTime?
+}
+
+// ---------- Necesidades y plantilla de equipo ----------
+
+/**
+ * Necesidad de un departamento para este proyecto.
+ *
+ * Cuelga del DEPARTAMENTO y no de la persona: "8 dobles de producto" es de
+ * arte, y lo sigue siendo si cambia el jefe de arte a mitad de preproducción.
+ * Colgarla de la persona haría perder la información en cada cambio de equipo.
+ *
+ * `responsableId` marca quién la lleva. Es quien la ve en su acceso: los jefes
+ * de cada vertical, no los ayudantes.
+ */
+model Necesidad {
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  departamento String         // ARTE | VESTUARIO | CASTING | OPTICAS | MATERIALES | OTROS
+  concepto     String         // "Óptica macro", "Dobles de producto"
+  detalle      String?        // "8 uds por hero", "reservada en Camaleón"
+  estado       String         @default("pendiente") // pendiente | confirmada | descartada
+  responsableId String?
+  responsable  ProjectMember? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  orden        Int            @default(0)
+
+  @@index([projectId, departamento])
+}
+
+/**
+ * Puesto previsto en el presupuesto aprobado: "2 eléctricos", "1 DOP".
+ *
+ * Sirve para avisar de que falta gente por cerrar, no para bloquear nada. El
+ * producer muchas veces no tiene el nombre hasta el final, así que
+ * `confirmadoManualmente` permite silenciar el aviso de una línea concreta sin
+ * tener que inventarse un nombre para quitarse el rojo de encima.
+ */
+model PuestoPrevisto {
+  id                    String  @id @default(cuid())
+  projectId             String
+  project               Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rol                   String  // se compara con ProjectMember.role
+  cantidad              Int     @default(1)
+  confirmadoManualmente Boolean @default(false)
+  nota                  String?
+  orden                 Int     @default(0)
+
+  @@index([projectId])
 }
 
 // ---------- Rodaje (fase 5) ----------
@@ -173,13 +290,101 @@ model CallSheetDay {
   projectId     String
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   fecha         String
+  /// Fecha real de la jornada. El resto de la app usa fechas en texto libre,
+  /// pero el bloque "ahora mismo" de la vista de cliente y el archivo de
+  /// calendario necesitan una fecha de verdad: sin ella no se puede saber si
+  /// hoy es el día de rodaje ni generar un evento.
+  fechaISO      DateTime?
+  /// OBSOLETO: sustituido por el modelo Localizacion, que admite varias por
+  /// jornada con dirección, parking y accesos. Se conserva solo para no perder
+  /// datos de jornadas anteriores; nada lo escribe ya.
   localizacion  String?
   primeraHora   String?
   amanecer      String?
   ocaso         String?
   meteo         String?
+  puntoEncuentro String?
+  contactoSet    String? // quién de producción está localizable en set ese día
+  contactoSetTel String? // el ÚNICO teléfono que ven colaboradores, cliente y agencia
+  orden         Int      @default(0) // para ordenar las jornadas sin depender del texto de la fecha
+
+  // Hospital más cercano. Va en la orden de rodaje de cualquier producción seria
+  // y forma parte de la prevención de riesgos: el día que alguien se hace daño,
+  // nadie debería estar buscándolo en el móvil.
+  hospitalNombre    String?
+  hospitalDireccion String?
+  hospitalTelefono  String?
+  hospitalMapsUrl   String?
+
+  // Catering. Los menús se cuentan aquí; las restricciones alimentarias viven
+  // en ProjectMember porque son de cada persona.
+  cateringDesayuno String?
+  cateringComida   String?
+  cateringNotas    String?
+
+  // Hora a la que a producción le interesa que aparezcan cliente y agencia.
+  // No es el call del equipo: es cuando ya hay algo que enseñar.
+  llegadaCliente String?
 
   scheduleItems ScheduleItem[]
+  callTimes     CallTime[]
+  localizaciones Localizacion[]
+  traslados      Traslado[]
+}
+
+/**
+ * Localización de una jornada. Son varias por día en cuanto hay un traslado, así
+ * que no puede ser un campo de texto en la jornada.
+ */
+model Localizacion {
+  id             String       @id @default(cuid())
+  callSheetDayId String
+  callSheetDay   CallSheetDay @relation(fields: [callSheetDayId], references: [id], onDelete: Cascade)
+  nombre         String       // "Nave de Paterna", "Terraza del hotel"
+  direccion      String?
+  mapsUrl        String?
+  parking        String?
+  accesos        String?      // por qué puerta se entra, códigos, a quién preguntar
+  notas          String?
+  orden          Int          @default(0)
+}
+
+/**
+ * Orden de traslados. `ocupantes` es texto libre a propósito: producción escribe
+ * "equipo de arte + Clara" y forzar una lista de personas seleccionables haría
+ * el formulario más lento que el WhatsApp que viene a sustituir.
+ */
+model Traslado {
+  id             String       @id @default(cuid())
+  callSheetDayId String
+  callSheetDay   CallSheetDay @relation(fields: [callSheetDayId], references: [id], onDelete: Cascade)
+  hora           String
+  origen         String
+  destino        String
+  vehiculo       String?
+  conductor      String?
+  ocupantes      String?
+  notas          String?
+  orden          Int          @default(0)
+}
+
+/**
+ * Hora de convocatoria de una persona en una jornada concreta.
+ *
+ * `ProjectMember.callTime` sigue existiendo como hora por defecto del proyecto,
+ * pero en un rodaje de varias jornadas cada día tiene sus horas: el equipo de
+ * arte entra antes que el de cámara, y no el mismo día que el cast. Sin esto la
+ * orden de rodaje solo servía para rodajes de un día.
+ */
+model CallTime {
+  id              String        @id @default(cuid())
+  callSheetDayId  String
+  callSheetDay    CallSheetDay  @relation(fields: [callSheetDayId], references: [id], onDelete: Cascade)
+  projectMemberId String
+  projectMember   ProjectMember @relation(fields: [projectMemberId], references: [id], onDelete: Cascade)
+  hora            String
+
+  @@unique([callSheetDayId, projectMemberId])
 }
 
 model ScheduleItem {
@@ -224,4 +429,100 @@ model Expense {
   concept    String
   amount     Int
   syncedAt   DateTime @default(now())
+}
+
+// ---------- Protección de datos ----------
+
+/**
+ * Registro de accesos a datos personales. El RGPD obliga a poder acreditar
+ * quién ha consultado o exportado datos de un tercero y cuándo; sin esta tabla
+ * la respuesta a "¿quién sacó el IBAN de fulano?" es "no se sabe".
+ *
+ * Guarda quién, qué persona, qué hizo y desde dónde. Nunca el dato en sí.
+ */
+model AccesoDatosPersonales {
+  id          String   @id @default(cuid())
+  staffUserId String?  // null = acceso del propio interesado por enlace mágico
+  staffNombre String   // se guarda el nombre además del id: si la cuenta se borra, el registro debe seguir siendo legible
+  personId    String?  // persona cuyos datos se han consultado
+  personNombre String?
+  accion      String   // ver_ficha | revelar_campo | exportar_altas | editar_datos
+  detalle     String?  // p. ej. qué campo se reveló, o el código del proyecto exportado
+  ip          String?
+  creadoEn    DateTime @default(now())
+
+  @@index([personId, creadoEn])
+  @@index([staffUserId, creadoEn])
+}
+
+// ---------- Módulo creativo: cerebro de tendencias ----------
+
+/**
+ * Una señal captada de una fuente externa.
+ *
+ * Tabla deliberadamente genérica: un artículo de Dezeen, las visitas diarias de
+ * una entrada de Wikipedia y un post de Bluesky son cosas muy distintas, pero
+ * para el cerebro son lo mismo — algo que ocurrió, cuándo, con cuánta fuerza.
+ * Normalizarlas aquí permite añadir fuentes nuevas sin tocar lo que consume.
+ *
+ * `crudo` guarda la respuesta original. Ocupa, pero permite reinterpretar el
+ * histórico cuando se nos ocurra algo mejor que hacer con él, sin tener que
+ * volver a pedir datos que quizá ya no estén disponibles.
+ */
+model Senal {
+  id           String    @id @default(cuid())
+  fuente       String    // WIKIPEDIA | GDELT | BLUESKY | HACKERNEWS | RSS
+  claveExterna String    // id en el origen: evita duplicar en cada pasada
+  titulo       String
+  texto        String?   @db.Text
+  url          String?
+  autor        String?
+  idioma       String?
+  /// Fuerza de la señal en las unidades de su fuente: visitas, puntuación, likes.
+  /// No es comparable entre fuentes y no se pretende que lo sea.
+  metrica      Float?
+  /// Término o cuenta con la que se capturó, para poder agrupar por interés.
+  tema         String?
+  vertical     String?   // MODA | DISENO | CULTURA | MEME | CINE | TECNOLOGIA | INTERNET
+  publicadaEn  DateTime?
+  capturadaEn  DateTime  @default(now())
+  crudo        Json?
+
+  @@unique([fuente, claveExterna])
+  @@index([fuente, publicadaEn])
+  @@index([vertical, publicadaEn])
+  @@index([tema])
+}
+
+/**
+ * Qué vigilar. Una sola tabla configura todas las fuentes: un término de
+ * Wikipedia, una cuenta de Bluesky, una URL de RSS o una consulta de GDELT.
+ *
+ * Así ampliar el radar es meter una fila, no desplegar código.
+ */
+model TemaSeguido {
+  id       String  @id @default(cuid())
+  fuente   String  // a qué ingestor aplica
+  termino  String  // "Streetwear" | "dezeen.com/feed" | "bsky.app"
+  etiqueta String? // nombre legible para las pantallas
+  vertical String?
+  idioma   String? // solo Wikipedia: es, en...
+  activo   Boolean @default(true)
+  creadoEn DateTime @default(now())
+
+  @@unique([fuente, termino])
+  @@index([fuente, activo])
+}
+
+/** Registro de cada pasada de ingesta, para saber si el cerebro está vivo. */
+model PasadaIngesta {
+  id         String   @id @default(cuid())
+  fuente     String
+  nuevas     Int      @default(0)
+  revisadas  Int      @default(0)
+  error      String?
+  duracionMs Int?
+  creadoEn   DateTime @default(now())
+
+  @@index([fuente, creadoEn])
 }
