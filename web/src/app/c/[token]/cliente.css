@@ -1,0 +1,254 @@
+/* Vista de cliente y agencia. Identidad Jakiens/Ricorico siempre: es nuestra
+   carta de presentación y competir con el manual de marca del cliente sale mal.
+   La marca entra por --acento desde el servidor. */
+
+.cl {
+  --tinta: #111111;
+  --papel: #ffffff;
+  --hueso: #f4f2ee;
+  --humo: #6b6b6b;
+  --pelo: #e2e0dc;
+  --acento: #111111;
+  font-family: var(--body, ui-sans-serif, system-ui, sans-serif);
+  color: var(--tinta);
+  background: var(--papel);
+  min-height: 100vh;
+}
+
+/* ---------- Portada ---------- */
+
+.cl-portada {
+  position: relative;
+  min-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 28px 22px 30px;
+  background: var(--tinta);
+  color: var(--papel);
+  overflow: hidden;
+}
+
+.cl-portada img.cl-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.62;
+}
+
+/* Degradado para que el texto se lea sobre cualquier imagen. */
+.cl-portada::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.1) 38%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+.cl-portada > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cl-kicker {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.cl-titulo {
+  font-size: clamp(30px, 8vw, 62px);
+  line-height: 1.02;
+  margin: 10px 0 4px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.cl-sub {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* ---------- Los tres logos ---------- */
+
+.cl-logos {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.cl-logos img {
+  height: 22px;
+  width: auto;
+  max-width: 40vw;
+  object-fit: contain;
+}
+
+/* Los logos son SVG de un solo color y oscuros: sobre la portada se invierten
+   para que se lean en blanco, sin necesidad de una segunda versión del archivo. */
+.cl-logos img.cl-invertir {
+  filter: brightness(0) invert(1);
+}
+
+/* ---------- Ahora mismo ---------- */
+
+.ahora {
+  background: var(--acento);
+  color: #fff;
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.ahora-et {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.ahora strong {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.ahora-sub {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ---------- Cuerpo ---------- */
+
+.cl-main {
+  padding: 30px 22px 70px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.cl-bloque {
+  border-top: 1px solid var(--pelo);
+  padding: 24px 0;
+}
+
+.cl-bloque:first-child {
+  border-top: none;
+}
+
+.cl-bloque h2 {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--humo);
+  margin: 0 0 14px;
+  font-weight: 400;
+}
+
+.cl-bloque h3 {
+  font-size: 17px;
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.cl-bloque p {
+  margin: 0 0 6px;
+  line-height: 1.55;
+}
+
+.cl-dato {
+  color: var(--humo);
+  font-size: 14px;
+}
+
+.cl-fila {
+  display: flex;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--pelo);
+}
+
+.cl-fila:last-child {
+  border-bottom: none;
+}
+
+.cl-hora {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  min-width: 58px;
+  padding-top: 2px;
+  color: var(--acento);
+}
+
+.cl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  border: 1px solid var(--tinta);
+  color: var(--tinta);
+  text-decoration: none;
+  margin: 4px 8px 4px 0;
+}
+
+.cl-btn.solido {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+
+.cl-aviso {
+  background: var(--hueso);
+  padding: 16px 18px;
+  margin-top: 8px;
+}
+
+.cl-pie {
+  border-top: 1px solid var(--pelo);
+  padding: 26px 22px 50px;
+  text-align: center;
+  color: var(--humo);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media print {
+  .ahora,
+  .cl-btn {
+    display: none;
+  }
+  .cl-portada {
+    min-height: auto;
+    color: #111;
+    background: #fff;
+  }
+  .cl-portada img.cl-bg,
+  .cl-portada::after {
+    display: none;
+  }
+  .cl-logos img.cl-invertir {
+    filter: none;
+  }
+}

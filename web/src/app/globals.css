@@ -176,3 +176,9 @@ form.alta{padding:16px}
   .roster th:nth-child(3),.roster td:nth-child(3){display:none}
   .meta .cell{min-width:100px}
 }
+
+/* ---------- Bloques por productora ---------- */
+/* El color entra como --marca desde el servidor (ver src/lib/marcas.ts). */
+.panel.marca{border-left:3px solid var(--marca)}
+.panel.marca .phdr h3{display:flex;align-items:center;gap:9px}
+.marca-punto{width:9px;height:9px;background:var(--marca);display:inline-block;flex:0 0 auto}

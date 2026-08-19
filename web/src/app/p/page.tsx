@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
 import { logoutAction } from "@/app/actions";
 import { firstAllowedPhaseForStaff, STAFF_TIER_LABEL } from "@/lib/phases";
+import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
 
 export default async function ProyectosPage() {
   const staff = await requireStaff();
@@ -11,6 +12,14 @@ export default async function ProyectosPage() {
   const projects = await db.project.findMany({ orderBy: { createdAt: "desc" } });
   const activos = projects.filter((p) => p.status !== "cerrado");
   const cerrados = projects.filter((p) => p.status === "cerrado");
+
+  // Un bloque por productora. El flujo de trabajo es el mismo en las dos, pero
+  // verlas separadas evita confundir un rodaje de 40k con una pieza de social.
+  const porMarca = CLAVES_MARCA.map((clave) => ({
+    clave,
+    marca: MARCAS[clave],
+    proyectos: activos.filter((p) => (p.brand ?? "JAKIENS") === clave),
+  })).filter((b) => b.proyectos.length > 0);
 
   return (
     <div className="shell">
@@ -38,6 +47,9 @@ export default async function ProyectosPage() {
             <h2>Proyectos activos</h2>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            <Link href="/radar" className="btn ghost">
+              Radar
+            </Link>
             {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
               <Link href="/colaboradores" className="btn ghost">
                 Colaboradores
@@ -51,28 +63,44 @@ export default async function ProyectosPage() {
           </div>
         </div>
 
-        <div className="panel">
-          {activos.map((p) => (
-            <div className="file" key={p.id}>
-              <div className="ic" data-ext={p.code.split("-")[0]?.slice(0, 4) ?? "PRJ"}></div>
-              <div className="fmeta">
-                <div className="fn">{p.name}</div>
-                <div className="fd">
-                  {p.client} · {p.code} · {p.shootLabel}
-                </div>
-              </div>
-              <Link className="btn" href={`/p/${p.code}/${landingPhase}`}>
-                Entrar
-              </Link>
+        {porMarca.map(({ clave, marca, proyectos }) => (
+          <div className="panel marca" style={{ ["--marca" as string]: marca.color }} key={clave}>
+            <div className="phdr">
+              <h3>
+                <span className="marca-punto" />
+                {marca.nombre}
+              </h3>
+              <span className="tag">
+                {proyectos.length} {proyectos.length === 1 ? "proyecto" : "proyectos"}
+              </span>
             </div>
-          ))}
-          {activos.length === 0 ? (
+            {proyectos.map((p) => (
+              <div className="file" key={p.id}>
+                <div className="ic" data-ext={p.code.split("-")[0]?.slice(0, 4) ?? "PRJ"}></div>
+                <div className="fmeta">
+                  <div className="fn">{p.name}</div>
+                  <div className="fd">
+                    {p.client} · {p.code} · {p.shootLabel}
+                  </div>
+                </div>
+                <Link className="btn" href={`/p/${p.code}/${landingPhase}`}>
+                  Entrar
+                </Link>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        {activos.length === 0 ? (
+          <div className="panel">
             <div className="empty">
               <span className="em-mono">Sin proyectos activos</span>
-              {staff.tier === "FULL" ? "Crea el primero con el botón de arriba." : "Todavía no hay ningún proyecto asignado."}
+              {staff.tier === "FULL"
+                ? "Crea el primero con el botón de arriba."
+                : "Todavía no hay ningún proyecto asignado."}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {cerrados.length > 0 ? (
           <div className="panel">
@@ -86,6 +114,7 @@ export default async function ProyectosPage() {
                 <div className="fmeta">
                   <div className="fn">{p.name}</div>
                   <div className="fd">
+                    {MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS]?.nombre ?? "Jakiens"} ·{" "}
                     {p.client} · {p.code}
                   </div>
                 </div>

@@ -3,10 +3,16 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
+import { CLAVES_MARCA, type ClaveMarca } from "@/lib/marcas";
 
 export async function createProjectAction(formData: FormData) {
   const staff = await requireStaff();
   if (staff.tier !== "FULL") return;
+
+  const brandBruto = String(formData.get("brand") ?? "JAKIENS").trim().toUpperCase();
+  const brand: ClaveMarca = CLAVES_MARCA.includes(brandBruto as ClaveMarca)
+    ? (brandBruto as ClaveMarca)
+    : "JAKIENS";
 
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const client = String(formData.get("client") ?? "").trim();
@@ -36,6 +42,7 @@ export async function createProjectAction(formData: FormData) {
 
   const project = await db.project.create({
     data: {
+      brand,
       code,
       client,
       name,
