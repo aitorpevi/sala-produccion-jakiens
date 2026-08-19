@@ -44,6 +44,50 @@ function limpiar(s: string): string {
     .trim();
 }
 
+/**
+ * Convierte un XML de RSS o Atom en señales. Se exporta porque Reddit sirve
+ * Atom por la misma vía y no tiene sentido duplicar el parseo.
+ */
+export function parsearFeed(
+  xml: string,
+  meta: { fuente: SenalNueva["fuente"]; tema: string | null; vertical: string | null },
+  maximo = POR_FEED,
+): SenalNueva[] {
+  const senales: SenalNueva[] = [];
+
+  const bloques = [
+    ...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi),
+    ...xml.matchAll(/<entry[\s>][\s\S]*?<\/entry>/gi),
+  ]
+    .map((m) => m[0])
+    .slice(0, maximo);
+
+  for (const b of bloques) {
+    const titulo = entreEtiquetas(b, "title");
+    if (!titulo) continue;
+
+    const enlace = entreEtiquetas(b, "link") ?? b.match(/<link[^>]*href="([^"]+)"/i)?.[1] ?? null;
+    const fechaTexto =
+      entreEtiquetas(b, "pubDate") ?? entreEtiquetas(b, "published") ?? entreEtiquetas(b, "updated");
+    const fecha = fechaTexto ? new Date(fechaTexto) : null;
+    const guid = entreEtiquetas(b, "guid") ?? entreEtiquetas(b, "id") ?? enlace ?? titulo;
+
+    senales.push({
+      fuente: meta.fuente,
+      claveExterna: guid,
+      titulo,
+      texto: entreEtiquetas(b, "description") ?? entreEtiquetas(b, "summary"),
+      url: enlace,
+      autor: entreEtiquetas(b, "dc:creator") ?? entreEtiquetas(b, "author"),
+      tema: meta.tema,
+      vertical: meta.vertical,
+      publicadaEn: fecha && !Number.isNaN(fecha.getTime()) ? fecha : null,
+    });
+  }
+
+  return senales;
+}
+
 export const ingerirRss: Ingestor = async (vigilados) => {
   const senales: SenalNueva[] = [];
 
@@ -52,44 +96,13 @@ export const ingerirRss: Ingestor = async (vigilados) => {
 
     try {
       const xml = await pedirTexto(url, 25000);
-
-      // Sirve para RSS (<item>) y para Atom (<entry>).
-      const bloques = [
-        ...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi),
-        ...xml.matchAll(/<entry[\s>][\s\S]*?<\/entry>/gi),
-      ]
-        .map((m) => m[0])
-        .slice(0, POR_FEED);
-
-      for (const b of bloques) {
-        const titulo = entreEtiquetas(b, "title");
-        if (!titulo) continue;
-
-        const enlace =
-          entreEtiquetas(b, "link") ??
-          b.match(/<link[^>]*href="([^"]+)"/i)?.[1] ??
-          null;
-
-        const fechaTexto =
-          entreEtiquetas(b, "pubDate") ??
-          entreEtiquetas(b, "published") ??
-          entreEtiquetas(b, "updated");
-        const fecha = fechaTexto ? new Date(fechaTexto) : null;
-
-        const guid = entreEtiquetas(b, "guid") ?? entreEtiquetas(b, "id") ?? enlace ?? titulo;
-
-        senales.push({
+      senales.push(
+        ...parsearFeed(xml, {
           fuente: "RSS",
-          claveExterna: guid,
-          titulo,
-          texto: entreEtiquetas(b, "description") ?? entreEtiquetas(b, "summary"),
-          url: enlace,
-          autor: entreEtiquetas(b, "dc:creator") ?? entreEtiquetas(b, "author"),
           tema: v.etiqueta ?? new URL(url).hostname,
           vertical: v.vertical,
-          publicadaEn: fecha && !Number.isNaN(fecha.getTime()) ? fecha : null,
-        });
-      }
+        }),
+      );
     } catch (e) {
       console.error(`[rss] ${url}:`, (e as Error).message);
     }

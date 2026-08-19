@@ -7,6 +7,7 @@ import { ingerirBluesky } from "./bluesky";
 import { ingerirBlueskyFeed } from "./blueskyFeed";
 import { ingerirRss } from "./rss";
 import { ingerirGdelt } from "./gdelt";
+import { ingerirReddit } from "./reddit";
 
 export { FUENTES, VERTICALES } from "./tipos";
 export type { Fuente, Vertical } from "./tipos";
@@ -18,6 +19,7 @@ const INGESTORES: Record<Fuente, Ingestor> = {
   BLUESKY_FEED: ingerirBlueskyFeed,
   RSS: ingerirRss,
   GDELT: ingerirGdelt,
+  REDDIT: ingerirReddit,
 };
 
 export type Resultado = {
