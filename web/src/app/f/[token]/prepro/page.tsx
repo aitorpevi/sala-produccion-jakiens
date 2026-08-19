@@ -1,7 +1,8 @@
 import { requireMemberByToken } from "@/lib/access";
 import { AppShell, ModHead } from "@/components/AppShell";
 import { PHASES, phaseAllowedForMember } from "@/lib/phases";
-import { needsForPerson } from "@/lib/needs";
+import { db } from "@/lib/db";
+import { etiquetaDepartamento } from "@/lib/necesidades";
 
 const eur = (n: number) => "€" + n.toLocaleString("es-ES");
 
@@ -13,7 +14,13 @@ export default async function CollaboratorPreproPage({
   const { token } = await params;
   const member = await requireMemberByToken(token);
   const allowedPhases = PHASES.map((p) => p.key).filter((k) => phaseAllowedForMember(member, k));
-  const needs = needsForPerson(member.personId);
+  // Solo las necesidades de las que esta persona es responsable. En la práctica
+  // eso son los jefes de cada vertical: a un ayudante no le llega nada, que es
+  // justo lo que queremos.
+  const needs = await db.necesidad.findMany({
+    where: { responsableId: member.id, estado: { not: "descartada" } },
+    orderBy: [{ departamento: "asc" }, { orden: "asc" }],
+  });
 
   return (
     <AppShell
@@ -84,14 +91,20 @@ export default async function CollaboratorPreproPage({
             <h3>Necesidades para tu perfil</h3>
           </div>
           {needs.length ? (
-            needs.map(([k, v]) => (
-              <div className="kv" key={k}>
-                <span className="k">{k}</span>
-                <span className="v">{v}</span>
+            needs.map((n) => (
+              <div className="kv" key={n.id}>
+                <span className="k">
+                  {n.concepto}
+                  <span className="hint"> · {etiquetaDepartamento(n.departamento)}</span>
+                </span>
+                <span className="v">
+                  {n.detalle ?? "—"}
+                  {n.estado === "confirmada" ? " · confirmada" : ""}
+                </span>
               </div>
             ))
           ) : (
-            <div className="empty">Sin necesidades registradas todavía.</div>
+            <div className="empty">Sin necesidades asignadas a tu perfil.</div>
           )}
         </div>
       </div>
