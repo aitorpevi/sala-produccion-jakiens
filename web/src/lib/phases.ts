@@ -13,7 +13,7 @@ export const PHASES = [
 export type PhaseKey = (typeof PHASES)[number]["key"];
 
 // Fases con UI real en este hito; el resto muestra "próximamente".
-export const BUILT_PHASES: PhaseKey[] = ["equipo", "prepro", "materiales"];
+export const BUILT_PHASES: PhaseKey[] = PHASES.map((p) => p.key); // todas construidas
 
 export const PHASE_STATE: Record<PhaseKey, "done" | "live" | "next"> = {
   equipo: "done",
@@ -56,7 +56,10 @@ export const STAFF_TIER_LABEL: Record<StaffTier, string> = {
 
 export const STAFF_PHASE_ACCESS: Record<StaffTier, PhaseKey[]> = {
   FULL: PHASES.map((p) => p.key),
-  LOGISTICS: ["equipo", "prepro", "materiales", "rodaje"],
+  // Altas y Cierre quedan fuera a propósito: son las dos fases que manejan
+  // números de coste y datos fiscales del equipo. Prepro sí la ven, pero el
+  // bloque de presupuesto de esa página está reservado a FULL.
+  LOGISTICS: ["equipo", "prepro", "materiales", "rodaje", "postpro"],
   POSTPRODUCTION: ["prepro", "materiales", "postpro"],
 };
 

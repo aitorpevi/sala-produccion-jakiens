@@ -5,6 +5,7 @@ import { logoutAction } from "@/app/actions";
 import { STAFF_TIER_LABEL } from "@/lib/phases";
 import { notFound } from "next/navigation";
 import { updatePersonAction } from "./actions";
+import { registrarAcceso } from "@/lib/auditoria";
 
 export default async function ColaboradorPage({
   params,
@@ -12,6 +13,10 @@ export default async function ColaboradorPage({
   params: Promise<{ personId: string }>;
 }) {
   const staff = await requireStaffTier(["FULL", "LOGISTICS"]);
+  // Los datos fiscales solo los ve el nivel con acceso a contabilidad. Sin esto,
+  // LOGISTICS quedaba fuera de la fase de Altas pero llegaba a los mismos DNI e
+  // IBAN entrando por aquí.
+  const veDatosFiscales = staff.tier === "FULL";
   const { personId } = await params;
 
   const person = await db.person.findUnique({
@@ -19,6 +24,15 @@ export default async function ColaboradorPage({
     include: { memberships: { include: { project: true }, orderBy: { id: "desc" } } },
   });
   if (!person) notFound();
+
+  await registrarAcceso({
+    staffUserId: staff.id,
+    staffNombre: staff.name,
+    personId: person.id,
+    personNombre: person.name,
+    accion: "ver_ficha",
+    detalle: veDatosFiscales ? "Ficha con datos fiscales" : "Ficha sin datos fiscales",
+  });
 
   return (
     <div className="shell">
@@ -70,6 +84,8 @@ export default async function ColaboradorPage({
                 <label htmlFor="email">Email</label>
                 <input id="email" name="email" defaultValue={person.email ?? ""} />
               </div>
+              {veDatosFiscales ? (
+                <>
               <div className="field">
                 <label htmlFor="dni">DNI / NIE</label>
                 <input id="dni" name="dni" defaultValue={person.dni ?? ""} placeholder="00000000-X" />
@@ -90,6 +106,14 @@ export default async function ColaboradorPage({
                 <label htmlFor="domicilio">Domicilio completo</label>
                 <input id="domicilio" name="domicilio" defaultValue={person.domicilio ?? ""} />
               </div>
+                </>
+              ) : (
+                <div className="field full">
+                  <span className="hint">
+                    DNI, NAF, IBAN y domicilio no están disponibles para tu nivel de acceso.
+                  </span>
+                </div>
+              )}
               <div className="field">
                 <label htmlFor="okTicketId">ID en OK Ticket (cuando esté conectado)</label>
                 <input id="okTicketId" name="okTicketId" defaultValue={person.okTicketId ?? ""} />
