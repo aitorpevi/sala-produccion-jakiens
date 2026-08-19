@@ -5,6 +5,7 @@ import { logoutAction } from "@/app/actions";
 import { STAFF_TIER_LABEL } from "@/lib/phases";
 import { FUENTES, VERTICALES } from "@/lib/ingesta";
 import { movimientoWikipedia, destacadoDe, recienteDe, saludDeFuentes } from "@/lib/radar";
+import { MapaCerebro, type FilaFuente } from "./MapaCerebro";
 
 export const dynamic = "force-dynamic";
 
@@ -16,17 +17,6 @@ const ETIQUETA_VERTICAL: Record<string, string> = {
   CINE: "Cine",
   TECNOLOGIA: "Tecnología",
   INTERNET: "Internet",
-};
-
-const NOMBRE_FUENTE: Record<string, string> = {
-  WIKIPEDIA: "Wikipedia",
-  GDELT: "GDELT",
-  BLUESKY: "Bluesky · cuentas",
-  BLUESKY_FEED: "Bluesky · feeds",
-  BLUESKY_TRENDS: "Bluesky · tendencias",
-  HACKERNEWS: "Hacker News",
-  RSS: "Medios y newsletters",
-  REDDIT: "Reddit",
 };
 
 function haceCuanto(d: Date | null) {
@@ -49,7 +39,8 @@ export default async function RadarPage({
   const { vertical: v } = await searchParams;
   const vertical = v && VERTICALES.includes(v as never) ? v : undefined;
 
-  const [total, movimiento, tendencias, conversacion, medios, tech, salud] = await Promise.all([
+  const [total, movimiento, tendencias, conversacion, medios, tech, salud, vigilados, porVertical] =
+    await Promise.all([
     db.senal.count(vertical ? { where: { vertical } } : {}),
     movimientoWikipedia(),
     destacadoDe("BLUESKY_TRENDS", 8, vertical),
@@ -57,9 +48,21 @@ export default async function RadarPage({
     recienteDe("RSS", 8, vertical),
     destacadoDe("HACKERNEWS", 5, vertical),
     saludDeFuentes(),
+    db.temaSeguido.groupBy({ by: ["fuente"], where: { activo: true }, _count: true }),
+    db.senal.groupBy({ by: ["vertical"], _count: true }),
   ]);
 
-  const rotas = [...salud.ultima.values()].filter((p) => p.error);
+  const filasMapa: FilaFuente[] = FUENTES.map((f) => ({
+    fuente: f,
+    senales: salud.porFuente.find((x) => x.fuente === f)?._count ?? 0,
+    vigilados: vigilados.find((x) => x.fuente === f)?._count ?? 0,
+    caida: !!salud.ultima.get(f)?.error,
+  }));
+
+  const verticalesConDatos = porVertical
+    .filter((v) => v.vertical)
+    .map((v) => ({ vertical: v.vertical as string, n: v._count }));
+
   const ultimaPasada = [...salud.ultima.values()].sort(
     (a, b) => b.creadoEn.getTime() - a.creadoEn.getTime(),
   )[0]?.creadoEn;
@@ -272,35 +275,12 @@ export default async function RadarPage({
           </div>
         ) : null}
 
-        {/* ---------- Salud ---------- */}
-        <div className="panel">
-          <div className="phdr">
-            <h3>Fuentes</h3>
-            {rotas.length > 0 ? (
-              <span className="status pend">
-                <span className="s-dot"></span>
-                {rotas.length} sin datos
-              </span>
-            ) : (
-              <span className="status ok">
-                <span className="s-dot"></span>Todas al día
-              </span>
-            )}
-          </div>
-          {FUENTES.map((f) => {
-            const cuenta = salud.porFuente.find((x) => x.fuente === f)?._count ?? 0;
-            const ult = salud.ultima.get(f);
-            return (
-              <div className="kv" key={f}>
-                <span className="k">{NOMBRE_FUENTE[f] ?? f}</span>
-                <span className="v mono">
-                  {numero(cuenta)} señales
-                  {ult?.error ? " · sin datos" : ult ? ` · ${haceCuanto(ult.creadoEn)}` : " · nunca"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <MapaCerebro
+          fuentes={filasMapa}
+          totalSenales={total}
+          verticales={verticalesConDatos}
+        />
+
       </main>
 
       <div className="protonote">Sala de producción · Jakiens</div>
