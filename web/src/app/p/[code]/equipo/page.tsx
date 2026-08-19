@@ -154,6 +154,11 @@ export default async function EquipoPage({
               <label>Requiere alta en Seguridad Social</label>
               <input type="checkbox" name="requiereAlta" style={{ width: "auto" }} />
             </div>
+            <div className="field">
+              <label>Es equipo de casa (Jakiens/Ricorico)</label>
+              <input type="checkbox" name="esEquipoCore" style={{ width: "auto" }} />
+              <span className="hint">Va en nómina: no se le imputa coste al proyecto</span>
+            </div>
             <div className="field full">
               <label>Permisos de acceso</label>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>

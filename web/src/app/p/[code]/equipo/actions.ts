@@ -19,6 +19,7 @@ export async function addMemberAction(formData: FormData) {
   const dias = Number(formData.get("dias") ?? 1);
   const presupuestoGasto = Number(formData.get("presupuestoGasto") ?? 0);
   const requiereAlta = formData.get("requiereAlta") === "on";
+  const esEquipoCore = formData.get("esEquipoCore") === "on";
   const permisos = ALL_PERMISOS.filter((p) => formData.get(`perm_${p}`) === "on");
 
   if (!role) return;
@@ -61,6 +62,7 @@ export async function addMemberAction(formData: FormData) {
       dias: Number.isFinite(dias) && dias > 0 ? dias : 1,
       presupuestoGasto: Number.isFinite(presupuestoGasto) ? presupuestoGasto : 0,
       requiereAlta,
+      esEquipoCore,
       permisos,
     },
   });
