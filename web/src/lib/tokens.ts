@@ -22,7 +22,7 @@ export async function resolveAccessToken(token: string) {
     where: { token },
     include: {
       projectMember: {
-        include: { project: true, person: true },
+        include: { project: true, person: true, altaLaboral: true },
       },
     },
   });
