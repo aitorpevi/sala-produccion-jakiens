@@ -22,6 +22,7 @@ export default async function CollaboratorMaterialesPage({
       sizeLabel: true,
       direction: true,
       fileName: true,
+      linkUrl: true,
     },
     orderBy: { uploadedAt: "desc" },
   });
@@ -56,9 +57,13 @@ export default async function CollaboratorMaterialesPage({
             <div className="ic" data-ext={m.ext}></div>
             <div className="fmeta">
               <div className="fn">{m.name}</div>
-              <div className="fd">{m.sizeLabel ?? "—"}</div>
+              <div className="fd">{m.linkUrl ? "Enlace externo" : (m.sizeLabel ?? "—")}</div>
             </div>
-            {m.direction === "in" ? (
+            {m.linkUrl ? (
+              <a className="btn" href={m.linkUrl} target="_blank" rel="noreferrer noopener">
+                Abrir enlace
+              </a>
+            ) : m.direction === "in" ? (
               m.fileName ? (
                 <a className="btn" href={`/api/materiales/${m.id}?token=${token}`}>
                   Descargar

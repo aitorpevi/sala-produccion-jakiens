@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
 import { AppShell, ModHead, StaffViewerLabel } from "@/components/AppShell";
 import { STAFF_PHASE_ACCESS } from "@/lib/phases";
-import { uploadMaterialAction } from "./actions";
+import { uploadMaterialAction, addMaterialLinkAction } from "./actions";
 
 export default async function MaterialesPage({
   params,
@@ -22,6 +22,7 @@ export default async function MaterialesPage({
         sizeLabel: true,
         direction: true,
         fileName: true,
+        linkUrl: true,
         targets: { include: { projectMember: { include: { person: true } } } },
       },
       orderBy: { uploadedAt: "desc" },
@@ -57,11 +58,15 @@ export default async function MaterialesPage({
             <div className="fmeta">
               <div className="fn">{m.name}</div>
               <div className="fd">
-                {m.sizeLabel ?? "—"} · {m.direction === "in" ? "Para descargar" : "A subir por colaborador"} ·{" "}
+                {m.linkUrl ? "Enlace externo" : (m.sizeLabel ?? "—")} · {m.direction === "in" ? "Para descargar" : "A subir por colaborador"} ·{" "}
                 {m.targets.map((t) => t.projectMember.person.name).join(", ") || "sin destinatarios"}
               </div>
             </div>
-            {m.fileName ? (
+            {m.linkUrl ? (
+              <a className="btn" href={m.linkUrl} target="_blank" rel="noreferrer noopener">
+                Abrir enlace
+              </a>
+            ) : m.fileName ? (
               <a className="btn" href={`/api/materiales/${m.id}`}>
                 Descargar
               </a>
@@ -115,6 +120,54 @@ export default async function MaterialesPage({
             <span className="hint">El destinatario podrá descargarlo desde su ficha</span>
             <button className="btn solid" type="submit">
               Subir material
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="panel">
+        <div className="phdr">
+          <h3>Enlazar material en la nube</h3>
+          <span className="tag">Drive · Dropbox · Frame.io</span>
+        </div>
+        <form action={addMaterialLinkAction} className="alta">
+          <input type="hidden" name="code" value={code} />
+          <div className="fgrid">
+            <div className="field">
+              <label htmlFor="link-name">Nombre del documento</label>
+              <input id="link-name" name="name" placeholder="Ej. Carpeta de referencias" required />
+            </div>
+            <div className="field">
+              <label htmlFor="linkUrl">Enlace</label>
+              <input id="linkUrl" name="linkUrl" type="url" placeholder="https://drive.google.com/..." required />
+            </div>
+            <div className="field full">
+              <label>Destinatarios</label>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {members.map((m) => (
+                  <label
+                    key={m.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontFamily: "var(--body)",
+                      fontSize: 14,
+                    }}
+                  >
+                    <input type="checkbox" name="targetIds" value={m.id} style={{ width: "auto" }} />
+                    {m.person.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="form-foot">
+            <span className="hint">
+              Comprueba que la carpeta esté compartida: la intranet enlaza, no da permisos
+            </span>
+            <button className="btn solid" type="submit">
+              Añadir enlace
             </button>
           </div>
         </form>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireMemberByToken } from "@/lib/access";
-import { readFileAsBuffer, humanFileSize } from "@/lib/storage";
+import { guardarArchivo, humanFileSize } from "@/lib/storage";
 import { notifySlack } from "@/lib/slack";
 
 export async function uploadFromCollaboratorAction(formData: FormData) {
@@ -22,11 +22,11 @@ export async function uploadFromCollaboratorAction(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return;
 
-  const { buffer, fileName, size } = await readFileAsBuffer(file);
+  const { fileUrl, fileData, fileName, size } = await guardarArchivo(file);
 
   await db.material.update({
     where: { id: material.id },
-    data: { fileData: buffer, fileName, sizeLabel: humanFileSize(size) },
+    data: { fileUrl, fileData, fileName, sizeLabel: humanFileSize(size) },
   });
 
   await notifySlack(
