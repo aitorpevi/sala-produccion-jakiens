@@ -14,6 +14,7 @@ export const FUENTES = [
   "HACKERNEWS",
   "RSS",
   "REDDIT",
+  "BLUESKY_TRENDS",
 ] as const;
 export type Fuente = (typeof FUENTES)[number];
 
