@@ -16,16 +16,7 @@
  * deuteranope, comprobado con el validador (ΔE 2,5).
  */
 
-const NOMBRE: Record<string, string> = {
-  WIKIPEDIA: "Wikipedia",
-  GDELT: "GDELT",
-  BLUESKY: "Bluesky · cuentas",
-  BLUESKY_FEED: "Bluesky · feeds",
-  BLUESKY_TRENDS: "Bluesky · tendencias",
-  HACKERNEWS: "Hacker News",
-  RSS: "Medios y newsletters",
-  REDDIT: "Reddit",
-};
+import { NOMBRE_FUENTE } from "@/lib/ingesta";
 
 const QUE_APORTA: Record<string, string> = {
   WIKIPEDIA: "Interés por tema, con serie diaria",
@@ -102,7 +93,7 @@ export function MapaCerebro({
               return (
                 <g key={f.fuente}>
                   <text x={xTexto} y={y + 10} fontSize="11" fill="#111111">
-                    {NOMBRE[f.fuente] ?? f.fuente}
+                    {NOMBRE_FUENTE[f.fuente as keyof typeof NOMBRE_FUENTE] ?? f.fuente}
                   </text>
                   <text x={xTexto} y={y + 26} fontSize="8.5" fill="#8a8a8a">
                     {QUE_APORTA[f.fuente] ?? ""}

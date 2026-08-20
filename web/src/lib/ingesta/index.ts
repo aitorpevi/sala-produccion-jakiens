@@ -12,6 +12,8 @@ import { ingerirBlueskyTrends } from "./blueskyTrends";
 
 export { FUENTES, VERTICALES } from "./tipos";
 export type { Fuente, Vertical } from "./tipos";
+export { FICHAS, NOMBRE_FUENTE } from "./fichas";
+export type { FichaFuente } from "./fichas";
 
 const INGESTORES: Record<Fuente, Ingestor> = {
   WIKIPEDIA: ingerirWikipedia,

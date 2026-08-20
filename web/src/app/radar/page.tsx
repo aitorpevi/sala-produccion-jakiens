@@ -100,8 +100,13 @@ export default async function RadarPage({
               significa nada.
             </p>
           </div>
-          <div className="scope-note">
-            {numero(total)} señales · actualizado {haceCuanto(ultimaPasada ?? null)}
+          <div className="scope-note" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span>
+              {numero(total)} señales · actualizado {haceCuanto(ultimaPasada ?? null)}
+            </span>
+            <Link href="/radar/fuentes" className="btn ghost">
+              Gestionar fuentes
+            </Link>
           </div>
         </div>
 

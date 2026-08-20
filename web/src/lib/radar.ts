@@ -96,3 +96,41 @@ export async function saludDeFuentes() {
 
   return { porFuente, ultima };
 }
+
+// ---------- Métricas por fuente, para la pantalla de gestión ----------
+
+export type MetricasFuente = {
+  fuente: string;
+  totalSenales: number;
+  primeraSenal: Date | null;
+  ultimaSenal: Date | null;
+  pasadasRecientes: number;
+  fallosRecientes: number;
+  ultimaPasadaError: string | null;
+  ultimaPasadaEn: Date | null;
+};
+
+/**
+ * Lo cuantitativo de una fuente: volumen real y fiabilidad de las últimas 10
+ * pasadas. Se calcula en vivo a propósito — a diferencia de la ficha
+ * cualitativa (texto fijo en código), esto cambia cada vez que corre el cron.
+ */
+export async function metricasDeFuente(fuente: string): Promise<MetricasFuente> {
+  const [totalSenales, primera, ultima, pasadas] = await Promise.all([
+    db.senal.count({ where: { fuente } }),
+    db.senal.findFirst({ where: { fuente }, orderBy: { publicadaEn: "asc" }, select: { publicadaEn: true } }),
+    db.senal.findFirst({ where: { fuente }, orderBy: { publicadaEn: "desc" }, select: { publicadaEn: true } }),
+    db.pasadaIngesta.findMany({ where: { fuente }, orderBy: { creadoEn: "desc" }, take: 10 }),
+  ]);
+
+  return {
+    fuente,
+    totalSenales,
+    primeraSenal: primera?.publicadaEn ?? null,
+    ultimaSenal: ultima?.publicadaEn ?? null,
+    pasadasRecientes: pasadas.length,
+    fallosRecientes: pasadas.filter((p) => p.error).length,
+    ultimaPasadaError: pasadas[0]?.error ?? null,
+    ultimaPasadaEn: pasadas[0]?.creadoEn ?? null,
+  };
+}
