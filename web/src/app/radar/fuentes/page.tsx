@@ -83,8 +83,8 @@ export default async function FuentesPage({
             <span className="step">Módulo creativo</span>
             <h2>Fuentes</h2>
             <p className="lead">
-              Qué vigila el cerebro, por qué merece la pena y qué cuesta. Añade, desactiva o borra
-              sin tocar código.
+              Cada plataforma se despliega al hacer clic. Dentro, cada término vigilado también —
+              para editarlo, ábrelo; para verlo de un vistazo, no hace falta.
             </p>
           </div>
           <Link href="/radar" className="btn ghost">
@@ -101,7 +101,7 @@ export default async function FuentesPage({
           </div>
         ) : null}
 
-        {FUENTES.map((fuente) => {
+        {FUENTES.map((fuente, i) => {
           const ficha = FICHAS[fuente];
           const m = metricasPorFuente.get(fuente);
           const delaFuente = vigilados.filter((v) => v.fuente === fuente);
@@ -110,19 +110,28 @@ export default async function FuentesPage({
           const fallando = !!m?.ultimaPasadaError;
 
           return (
-            <div className="panel" key={fuente} id={fuente}>
-              <div className="phdr">
-                <h3>{NOMBRE_FUENTE[fuente]}</h3>
-                {fallando ? (
-                  <span className="status pend">
-                    <span className="s-dot"></span>Sin datos en la última pasada
+            <details className="panel" key={fuente} id={fuente} open={i === 0}>
+              <summary className="fuente-resumen">
+                <span className="fuente-resumen-left">
+                  <span className="chevron">▸</span>
+                  <h3>{NOMBRE_FUENTE[fuente]}</h3>
+                </span>
+                <span className="fuente-resumen-right">
+                  <span className="tag">
+                    {activos.length} activos
+                    {inactivos.length > 0 ? ` · ${inactivos.length} apagados` : ""}
                   </span>
-                ) : (
-                  <span className="status ok">
-                    <span className="s-dot"></span>Al día
-                  </span>
-                )}
-              </div>
+                  {fallando ? (
+                    <span className="status pend">
+                      <span className="s-dot"></span>Sin datos
+                    </span>
+                  ) : (
+                    <span className="status ok">
+                      <span className="s-dot"></span>Al día
+                    </span>
+                  )}
+                </span>
+              </summary>
 
               <div className="body-copy">
                 <p>{ficha.cualitativo}</p>
@@ -143,13 +152,6 @@ export default async function FuentesPage({
                   <span className="v mono">{numero(m?.totalSenales ?? 0)}</span>
                 </div>
                 <div className="kv">
-                  <span className="k">Vigilados</span>
-                  <span className="v mono">
-                    {activos.length} activos
-                    {inactivos.length > 0 ? ` · ${inactivos.length} desactivados` : ""}
-                  </span>
-                </div>
-                <div className="kv">
                   <span className="k">Última señal capturada</span>
                   <span className="v mono">{haceCuanto(m?.ultimaSenal ?? null)}</span>
                 </div>
@@ -163,39 +165,119 @@ export default async function FuentesPage({
               </div>
 
               {ficha.admiteVigilados ? (
-                <div className="body-copy" style={{ borderTop: "1px solid var(--hair)", paddingTop: 14 }}>
+                <div style={{ borderTop: "1px solid var(--hair)" }}>
                   {delaFuente.length === 0 ? (
-                    <p className="hint">Nada vigilado todavía en esta fuente.</p>
+                    <p className="hint" style={{ padding: "12px 16px" }}>
+                      Nada vigilado todavía en esta fuente.
+                    </p>
                   ) : (
                     delaFuente.map((v) => (
-                      <form
-                        action={guardarVigiladoAction}
-                        className="fgrid"
-                        key={v.id}
-                        style={{ marginBottom: 12, opacity: v.activo ? 1 : 0.55 }}
-                      >
-                        <input type="hidden" name="id" value={v.id} />
-                        <div className="field full">
-                          <label>Término</label>
-                          <input value={v.termino} readOnly disabled />
+                      <details className="vigilado" key={v.id}>
+                        <summary>
+                          <span className="vigilado-info">
+                            <span className={`dot-estado ${v.activo ? "on" : "off"}`} />
+                            <span className="vigilado-termino">{v.etiqueta || v.termino}</span>
+                            {v.vertical ? (
+                              <span className="tag">{ETIQUETA_VERTICAL[v.vertical] ?? v.vertical}</span>
+                            ) : null}
+                          </span>
+                          <span className="chevron">▸</span>
+                        </summary>
+                        <div className="vigilado-edit">
+                          <form action={guardarVigiladoAction} className="fgrid">
+                            <input type="hidden" name="id" value={v.id} />
+                            <div className="field full">
+                              <label>Término</label>
+                              <input value={v.termino} readOnly disabled />
+                            </div>
+                            <div className="field">
+                              <label htmlFor={`et-${v.id}`}>Etiqueta</label>
+                              <input
+                                id={`et-${v.id}`}
+                                name="etiqueta"
+                                defaultValue={v.etiqueta ?? ""}
+                                disabled={!puedeEditar}
+                              />
+                            </div>
+                            <div className="field">
+                              <label htmlFor={`vt-${v.id}`}>Vertical</label>
+                              <select
+                                id={`vt-${v.id}`}
+                                name="vertical"
+                                defaultValue={v.vertical ?? ""}
+                                disabled={!puedeEditar}
+                              >
+                                <option value="">Sin vertical</option>
+                                {VERTICALES.map((vv) => (
+                                  <option key={vv} value={vv}>
+                                    {ETIQUETA_VERTICAL[vv] ?? vv}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            {fuente === "WIKIPEDIA" ? (
+                              <div className="field">
+                                <label htmlFor={`id-${v.id}`}>Idioma</label>
+                                <input
+                                  id={`id-${v.id}`}
+                                  name="idioma"
+                                  defaultValue={v.idioma ?? "es"}
+                                  disabled={!puedeEditar}
+                                />
+                              </div>
+                            ) : null}
+                            <div className="field">
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  name="activo"
+                                  defaultChecked={v.activo}
+                                  style={{ width: "auto", marginRight: 6 }}
+                                  disabled={!puedeEditar}
+                                />
+                                Activo
+                              </label>
+                            </div>
+                            {puedeEditar ? (
+                              <div className="field" style={{ display: "flex", gap: 8, alignItems: "end" }}>
+                                <button className="btn" type="submit">
+                                  Guardar
+                                </button>
+                                <button
+                                  className="btn ghost"
+                                  type="submit"
+                                  formAction={eliminarVigiladoAction}
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            ) : null}
+                          </form>
                         </div>
-                        <div className="field">
-                          <label htmlFor={`et-${v.id}`}>Etiqueta</label>
+                      </details>
+                    ))
+                  )}
+
+                  {puedeEditar ? (
+                    <div className="body-copy">
+                      <form action={crearVigiladoAction} className="fgrid">
+                        <input type="hidden" name="fuente" value={fuente} />
+                        <div className="field full">
+                          <label htmlFor={`nuevo-${fuente}`}>Añadir</label>
                           <input
-                            id={`et-${v.id}`}
-                            name="etiqueta"
-                            defaultValue={v.etiqueta ?? ""}
-                            disabled={!puedeEditar}
+                            id={`nuevo-${fuente}`}
+                            name="termino"
+                            placeholder={AYUDA_TERMINO[fuente]}
+                            required
                           />
                         </div>
                         <div className="field">
-                          <label htmlFor={`vt-${v.id}`}>Vertical</label>
-                          <select
-                            id={`vt-${v.id}`}
-                            name="vertical"
-                            defaultValue={v.vertical ?? ""}
-                            disabled={!puedeEditar}
-                          >
+                          <label htmlFor={`ne-${fuente}`}>Etiqueta</label>
+                          <input id={`ne-${fuente}`} name="etiqueta" placeholder="Nombre legible" />
+                        </div>
+                        <div className="field">
+                          <label htmlFor={`nv-${fuente}`}>Vertical</label>
+                          <select id={`nv-${fuente}`} name="vertical" defaultValue="">
                             <option value="">Sin vertical</option>
                             {VERTICALES.map((vv) => (
                               <option key={vv} value={vv}>
@@ -206,95 +288,26 @@ export default async function FuentesPage({
                         </div>
                         {fuente === "WIKIPEDIA" ? (
                           <div className="field">
-                            <label htmlFor={`id-${v.id}`}>Idioma</label>
-                            <input
-                              id={`id-${v.id}`}
-                              name="idioma"
-                              defaultValue={v.idioma ?? "es"}
-                              disabled={!puedeEditar}
-                            />
+                            <label htmlFor={`ni-${fuente}`}>Idioma</label>
+                            <input id={`ni-${fuente}`} name="idioma" placeholder="es" />
                           </div>
                         ) : null}
                         <div className="field">
-                          <label>
-                            <input
-                              type="checkbox"
-                              name="activo"
-                              defaultChecked={v.activo}
-                              style={{ width: "auto", marginRight: 6 }}
-                              disabled={!puedeEditar}
-                            />
-                            Activo
-                          </label>
+                          <button className="btn solid" type="submit">
+                            Añadir
+                          </button>
                         </div>
-                        {puedeEditar ? (
-                          <div className="field" style={{ display: "flex", gap: 8, alignItems: "end" }}>
-                            <button className="btn" type="submit">
-                              Guardar
-                            </button>
-                            <button
-                              className="btn ghost"
-                              type="submit"
-                              formAction={eliminarVigiladoAction}
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        ) : null}
                       </form>
-                    ))
-                  )}
-
-                  {puedeEditar ? (
-                    <form action={crearVigiladoAction} className="fgrid" style={{ marginTop: 6 }}>
-                      <input type="hidden" name="fuente" value={fuente} />
-                      <div className="field full">
-                        <label htmlFor={`nuevo-${fuente}`}>Añadir</label>
-                        <input
-                          id={`nuevo-${fuente}`}
-                          name="termino"
-                          placeholder={AYUDA_TERMINO[fuente]}
-                          required
-                        />
-                      </div>
-                      <div className="field">
-                        <label htmlFor={`ne-${fuente}`}>Etiqueta</label>
-                        <input id={`ne-${fuente}`} name="etiqueta" placeholder="Nombre legible" />
-                      </div>
-                      <div className="field">
-                        <label htmlFor={`nv-${fuente}`}>Vertical</label>
-                        <select id={`nv-${fuente}`} name="vertical" defaultValue="">
-                          <option value="">Sin vertical</option>
-                          {VERTICALES.map((vv) => (
-                            <option key={vv} value={vv}>
-                              {ETIQUETA_VERTICAL[vv] ?? vv}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {fuente === "WIKIPEDIA" ? (
-                        <div className="field">
-                          <label htmlFor={`ni-${fuente}`}>Idioma</label>
-                          <input id={`ni-${fuente}`} name="idioma" placeholder="es" />
-                        </div>
-                      ) : null}
-                      <div className="field">
-                        <button className="btn solid" type="submit">
-                          Añadir a {NOMBRE_FUENTE[fuente]}
-                        </button>
-                      </div>
-                    </form>
+                    </div>
                   ) : null}
                 </div>
               ) : (
-                <div className="body-copy" style={{ borderTop: "1px solid var(--hair)", paddingTop: 14 }}>
-                  <p className="hint">
-                    Esta fuente no admite términos vigilados: siempre trae las tendencias globales
-                    de la red.
-                  </p>
-                </div>
+                <p className="hint" style={{ padding: "12px 16px", borderTop: "1px solid var(--hair)" }}>
+                  Esta fuente no admite términos vigilados: siempre trae las tendencias globales de
+                  la red.
+                </p>
               )}
-            </div>
+            </details>
           );
         })}
       </main>
