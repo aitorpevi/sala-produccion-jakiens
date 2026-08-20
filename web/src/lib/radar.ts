@@ -31,7 +31,7 @@ export type Movimiento = {
  * que "moda" tenga muchas visitas no dice nada, porque siempre las tiene. Que
  * suba un 40% en una semana sí.
  */
-export async function movimientoWikipedia(): Promise<Movimiento[]> {
+export async function movimientoWikipedia(vertical?: string): Promise<Movimiento[]> {
   const hoy = new Date();
   const hace7 = new Date(hoy.getTime() - 7 * 24 * 3600 * 1000);
   const hace14 = new Date(hoy.getTime() - 14 * 24 * 3600 * 1000);
@@ -39,12 +39,16 @@ export async function movimientoWikipedia(): Promise<Movimiento[]> {
   const [reciente, anterior] = await Promise.all([
     db.senal.groupBy({
       by: ["tema"],
-      where: { fuente: "WIKIPEDIA", publicadaEn: { gte: hace7 } },
+      where: { fuente: "WIKIPEDIA", publicadaEn: { gte: hace7 }, ...(vertical ? { vertical } : {}) },
       _sum: { metrica: true },
     }),
     db.senal.groupBy({
       by: ["tema"],
-      where: { fuente: "WIKIPEDIA", publicadaEn: { gte: hace14, lt: hace7 } },
+      where: {
+        fuente: "WIKIPEDIA",
+        publicadaEn: { gte: hace14, lt: hace7 },
+        ...(vertical ? { vertical } : {}),
+      },
       _sum: { metrica: true },
     }),
   ]);
@@ -133,4 +137,28 @@ export async function metricasDeFuente(fuente: string): Promise<MetricasFuente> 
     ultimaPasadaError: pasadas[0]?.error ?? null,
     ultimaPasadaEn: pasadas[0]?.creadoEn ?? null,
   };
+}
+
+
+/**
+ * Lista cronológica de señales, filtrable por fuente y vertical a la vez.
+ *
+ * Distinto de `destacadoDe`: aquella ordena por métrica DENTRO de una fuente
+ * fija, para paneles como "lo más comentado". Esta es para explorar y quitar
+ * ruido — "todo menos Bluesky", "solo RSS de esta semana" — sin mezclar
+ * unidades de fuerza entre fuentes, porque ordena por fecha, no por métrica.
+ */
+export async function explorarSenales(opciones: {
+  fuentes?: string[];
+  vertical?: string;
+  cuantas?: number;
+}) {
+  return db.senal.findMany({
+    where: {
+      ...(opciones.fuentes && opciones.fuentes.length > 0 ? { fuente: { in: opciones.fuentes } } : {}),
+      ...(opciones.vertical ? { vertical: opciones.vertical } : {}),
+    },
+    orderBy: { publicadaEn: "desc" },
+    take: opciones.cuantas ?? 40,
+  });
 }

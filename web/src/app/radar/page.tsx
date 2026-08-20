@@ -6,6 +6,8 @@ import { STAFF_TIER_LABEL } from "@/lib/phases";
 import { FUENTES, VERTICALES } from "@/lib/ingesta";
 import { movimientoWikipedia, destacadoDe, recienteDe, saludDeFuentes } from "@/lib/radar";
 import { MapaCerebro, type FilaFuente } from "./MapaCerebro";
+import { FiltroFuentes } from "./FiltroFuentes";
+import { IconoRadar } from "@/components/IconoRadar";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,15 @@ const ETIQUETA_VERTICAL: Record<string, string> = {
   TECNOLOGIA: "Tecnología",
   INTERNET: "Internet",
 };
+
+/** Fuentes que dan pie a una tarjeta filtrable en esta pantalla. */
+const FUENTES_CON_TARJETA = [
+  { fuente: "BLUESKY_TRENDS", etiqueta: "Termómetro (Bluesky)" },
+  { fuente: "WIKIPEDIA", etiqueta: "Esta semana (Wikipedia)" },
+  { fuente: "BLUESKY", etiqueta: "Lo más comentado (Bluesky)" },
+  { fuente: "RSS", etiqueta: "Medios y newsletters" },
+  { fuente: "HACKERNEWS", etiqueta: "Señal temprana (Hacker News)" },
+];
 
 function haceCuanto(d: Date | null) {
   if (!d) return "—";
@@ -41,16 +52,18 @@ export default async function RadarPage({
 
   const [total, movimiento, tendencias, conversacion, medios, tech, salud, vigilados, porVertical] =
     await Promise.all([
-    db.senal.count(vertical ? { where: { vertical } } : {}),
-    movimientoWikipedia(),
-    destacadoDe("BLUESKY_TRENDS", 8, vertical),
-    destacadoDe("BLUESKY", 6, vertical),
-    recienteDe("RSS", 8, vertical),
-    destacadoDe("HACKERNEWS", 5, vertical),
-    saludDeFuentes(),
-    db.temaSeguido.groupBy({ by: ["fuente"], where: { activo: true }, _count: true }),
-    db.senal.groupBy({ by: ["vertical"], _count: true }),
-  ]);
+      db.senal.count(vertical ? { where: { vertical } } : {}),
+      // Antes no recibía `vertical`: filtrar cambiaba los demás paneles pero no
+      // este, así que parecía que el selector no hacía nada.
+      movimientoWikipedia(vertical),
+      destacadoDe("BLUESKY_TRENDS", 10, vertical),
+      destacadoDe("BLUESKY", 6, vertical),
+      recienteDe("RSS", 8, vertical),
+      destacadoDe("HACKERNEWS", 5, vertical),
+      saludDeFuentes(),
+      db.temaSeguido.groupBy({ by: ["fuente"], where: { activo: true }, _count: true }),
+      db.senal.groupBy({ by: ["vertical"], _count: true }),
+    ]);
 
   const filasMapa: FilaFuente[] = FUENTES.map((f) => ({
     fuente: f,
@@ -67,8 +80,10 @@ export default async function RadarPage({
     (a, b) => b.creadoEn.getTime() - a.creadoEn.getTime(),
   )[0]?.creadoEn;
 
-  const suben = tendencias.filter((t) => t.tema === "subiendo");
-  const enfrian = tendencias.filter((t) => t.tema !== "subiendo");
+  // Máximos para dimensionar las barras del termómetro (dos escalas
+  // independientes: Bluesky cuenta posts, Wikipedia cuenta visitas).
+  const maxTendencia = Math.max(1, ...tendencias.map((t) => t.metrica ?? 0));
+  const maxMovimiento = Math.max(1, ...movimiento.map((m) => m.reciente));
 
   return (
     <div className="shell">
@@ -92,7 +107,9 @@ export default async function RadarPage({
       <main>
         <div className="mod-head">
           <div className="htxt">
-            <span className="step">Módulo creativo</span>
+            <span className="step" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <IconoRadar size={13} /> Módulo creativo
+            </span>
             <h2>Radar</h2>
             <p className="lead">
               Cada fuente en sus propias unidades. Las visitas de Wikipedia y los likes de Bluesky
@@ -110,9 +127,10 @@ export default async function RadarPage({
           </div>
         </div>
 
+        {/* ---------- Filtros ---------- */}
         <div className="panel">
           <div className="phdr">
-            <h3>Filtrar por vertical</h3>
+            <h3>Vertical</h3>
             {vertical ? <span className="tag">{ETIQUETA_VERTICAL[vertical]}</span> : null}
           </div>
           <div className="body-copy">
@@ -136,156 +154,166 @@ export default async function RadarPage({
           </div>
         </div>
 
-        {/* ---------- Lo que se mueve ---------- */}
         <div className="panel">
           <div className="phdr">
-            <h3>Qué se mueve</h3>
-            <span className="tag">Wikipedia · 7 días vs 7 anteriores</span>
+            <h3>Fuentes visibles</h3>
+          </div>
+          <FiltroFuentes opciones={FUENTES_CON_TARJETA} />
+        </div>
+
+        {/* ---------- Termómetro: el módulo principal ---------- */}
+        <div className="panel" data-fuente="BLUESKY_TRENDS">
+          <div className="phdr">
+            <h3>Termómetro</h3>
+            <span className="tag">qué sube, qué se enfría</span>
           </div>
           <div className="body-copy">
-            <p className="hint">
-              Que un tema tenga muchas visitas no dice nada: «moda» siempre las tiene. Lo que
-              importa es la variación.
-            </p>
+            <div className="term-legend">
+              <span>
+                <span className="dot" style={{ background: "var(--sube)" }} />▲ Subiendo
+              </span>
+              <span>
+                <span className="dot" style={{ background: "var(--enfria)" }} />▼ Enfriándose
+              </span>
+            </div>
+
+            <div className="term-sub">Ahora mismo · Bluesky</div>
+            {tendencias.length === 0 ? (
+              <div className="empty">Sin tendencias con este filtro.</div>
+            ) : (
+              tendencias.map((t) => {
+                const sube = t.tema === "subiendo";
+                const pct = Math.max(3, ((t.metrica ?? 0) / maxTendencia) * 100);
+                return (
+                  <div className="term-row" key={t.id}>
+                    <span className={`term-dir ${sube ? "subir" : "enfriar"}`}>
+                      {sube ? "▲" : "▼"}
+                    </span>
+                    <div className="term-bar-wrap">
+                      <div
+                        className={`term-bar ${sube ? "subir" : "enfriar"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                      <span className="term-label">{t.titulo}</span>
+                    </div>
+                    <span className="term-count mono">{numero(t.metrica ?? 0)}</span>
+                  </div>
+                );
+              })
+            )}
+
+            <div className="term-sub">Esta semana · Wikipedia (7 días vs 7 anteriores)</div>
+            {movimiento.length === 0 ? (
+              <div className="empty">Aún no hay dos semanas de datos para comparar.</div>
+            ) : (
+              movimiento.map((m) => {
+                const sube = m.variacion === null || m.variacion >= 0;
+                const pct = Math.max(3, (m.reciente / maxMovimiento) * 100);
+                return (
+                  <div className="term-row" key={m.tema}>
+                    <span className={`term-dir ${sube ? "subir" : "enfriar"}`}>
+                      {sube ? "▲" : "▼"}
+                    </span>
+                    <div className="term-bar-wrap">
+                      <div
+                        className={`term-bar ${sube ? "subir" : "enfriar"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                      <span className="term-label">
+                        {m.tema}
+                        {m.variacion !== null
+                          ? ` · ${Math.abs(Math.round(m.variacion))}%`
+                          : " · sin comparación"}
+                      </span>
+                    </div>
+                    <span className="term-count mono">{numero(m.reciente)}</span>
+                  </div>
+                );
+              })
+            )}
           </div>
-          {movimiento.length === 0 ? (
-            <div className="empty">Aún no hay dos semanas de datos para comparar.</div>
-          ) : (
-            movimiento.map((m) => (
-              <div className="kv" key={m.tema}>
-                <span className="k">{m.tema}</span>
-                <span className="v mono">
-                  {m.variacion === null
-                    ? `${numero(m.reciente)} · sin comparación`
-                    : `${m.variacion >= 0 ? "▲" : "▼"} ${Math.abs(Math.round(m.variacion))}% · ${numero(m.reciente)} visitas`}
-                </span>
-              </div>
-            ))
-          )}
         </div>
 
-        {/* ---------- Conversación ---------- */}
-        <div className="grid2">
-          <div className="panel">
+        {/* ---------- Tarjetas secundarias, en cuadrícula modular ---------- */}
+        <div className="grid-cards">
+          <div className="panel" data-fuente="BLUESKY">
             <div className="phdr">
-              <h3>Subiendo ahora</h3>
-              <span className="tag">Bluesky</span>
+              <h3>Lo más comentado</h3>
+              <span className="tag">Bluesky · cuentas</span>
             </div>
-            {suben.length === 0 ? (
-              <div className="empty">Nada subiendo con este filtro.</div>
+            {conversacion.length === 0 ? (
+              <div className="empty">Sin señales con este filtro.</div>
             ) : (
-              suben.map((s) => (
-                <div className="kv" key={s.id}>
-                  <span className="k">{s.titulo}</span>
-                  <span className="v mono">{numero(s.metrica ?? 0)} posts</span>
+              conversacion.map((s) => (
+                <div className="file" key={s.id}>
+                  <div className="fmeta">
+                    <div className="fn">{s.titulo}</div>
+                    <div className="fd">
+                      @{s.autor} · {numero(s.metrica ?? 0)} · {haceCuanto(s.publicadaEn)}
+                    </div>
+                  </div>
+                  {s.url ? (
+                    <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
+                      Abrir
+                    </a>
+                  ) : null}
                 </div>
               ))
             )}
           </div>
 
-          <div className="panel">
+          <div className="panel" data-fuente="RSS">
             <div className="phdr">
-              <h3>Enfriándose</h3>
-              <span className="tag">Bluesky</span>
+              <h3>Publicado esta semana</h3>
+              <span className="tag">Medios</span>
             </div>
-            {enfrian.length === 0 ? (
-              <div className="empty">Nada enfriándose con este filtro.</div>
+            {medios.length === 0 ? (
+              <div className="empty">Sin artículos con este filtro.</div>
             ) : (
-              enfrian.map((s) => (
-                <div className="kv" key={s.id}>
-                  <span className="k">{s.titulo}</span>
-                  <span className="v mono">{numero(s.metrica ?? 0)} posts</span>
+              medios.map((s) => (
+                <div className="file" key={s.id}>
+                  <div className="fmeta">
+                    <div className="fn">{s.titulo}</div>
+                    <div className="fd">
+                      {s.tema} · {haceCuanto(s.publicadaEn)}
+                    </div>
+                  </div>
+                  {s.url ? (
+                    <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
+                      Leer
+                    </a>
+                  ) : null}
                 </div>
               ))
             )}
           </div>
-        </div>
 
-        {/* ---------- Lo más comentado ---------- */}
-        <div className="panel">
-          <div className="phdr">
-            <h3>Lo más comentado</h3>
-            <span className="tag">Bluesky · cuentas seguidas</span>
-          </div>
-          {conversacion.length === 0 ? (
-            <div className="empty">Sin señales con este filtro.</div>
-          ) : (
-            conversacion.map((s) => (
-              <div className="file" key={s.id}>
-                <div className="fmeta">
-                  <div className="fn">{s.titulo}</div>
-                  <div className="fd">
-                    @{s.autor} · {numero(s.metrica ?? 0)} interacciones · {haceCuanto(s.publicadaEn)}
-                  </div>
-                </div>
-                {s.url ? (
-                  <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
-                    Abrir
-                  </a>
-                ) : null}
+          {tech.length > 0 ? (
+            <div className="panel" data-fuente="HACKERNEWS">
+              <div className="phdr">
+                <h3>Señal temprana</h3>
+                <span className="tag">Hacker News</span>
               </div>
-            ))
-          )}
-        </div>
-
-        {/* ---------- Medios ---------- */}
-        <div className="panel">
-          <div className="phdr">
-            <h3>Publicado esta semana</h3>
-            <span className="tag">Medios y newsletters</span>
-          </div>
-          {medios.length === 0 ? (
-            <div className="empty">Sin artículos con este filtro.</div>
-          ) : (
-            medios.map((s) => (
-              <div className="file" key={s.id}>
-                <div className="fmeta">
-                  <div className="fn">{s.titulo}</div>
-                  <div className="fd">
-                    {s.tema} · {haceCuanto(s.publicadaEn)}
+              {tech.map((s) => (
+                <div className="file" key={s.id}>
+                  <div className="fmeta">
+                    <div className="fn">{s.titulo}</div>
+                    <div className="fd">
+                      {numero(s.metrica ?? 0)} puntos · {haceCuanto(s.publicadaEn)}
+                    </div>
                   </div>
+                  {s.url ? (
+                    <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
+                      Abrir
+                    </a>
+                  ) : null}
                 </div>
-                {s.url ? (
-                  <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
-                    Leer
-                  </a>
-                ) : null}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* ---------- Tecnología ---------- */}
-        {tech.length > 0 ? (
-          <div className="panel">
-            <div className="phdr">
-              <h3>Señal temprana</h3>
-              <span className="tag">Hacker News</span>
+              ))}
             </div>
-            {tech.map((s) => (
-              <div className="file" key={s.id}>
-                <div className="fmeta">
-                  <div className="fn">{s.titulo}</div>
-                  <div className="fd">
-                    {numero(s.metrica ?? 0)} puntos · {haceCuanto(s.publicadaEn)}
-                  </div>
-                </div>
-                {s.url ? (
-                  <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
-                    Abrir
-                  </a>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        <MapaCerebro
-          fuentes={filasMapa}
-          totalSenales={total}
-          verticales={verticalesConDatos}
-        />
-
+        <MapaCerebro fuentes={filasMapa} totalSenales={total} verticales={verticalesConDatos} />
       </main>
 
       <div className="protonote">Sala de producción · Jakiens</div>
