@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/access";
 import { logoutAction } from "@/app/actions";
 import { firstAllowedPhaseForStaff, STAFF_TIER_LABEL } from "@/lib/phases";
 import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
+import { IconoRadar } from "@/components/IconoRadar";
 
 export default async function ProyectosPage() {
   const staff = await requireStaff();
@@ -47,7 +48,12 @@ export default async function ProyectosPage() {
             <h2>Proyectos activos</h2>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/radar" className="btn ghost">
+            <Link
+              href="/radar"
+              className="btn solid"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7 }}
+            >
+              <IconoRadar size={15} />
               Radar
             </Link>
             {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
