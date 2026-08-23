@@ -246,3 +246,16 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .dot-estado{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 auto}
 .dot-estado.on{background:var(--ink)}
 .dot-estado.off{background:var(--hair-strong)}
+
+/* Módulo de memes: mucho volumen, así que la rejilla manda — cada pieza es
+   solo la imagen y su cifra, el resto sobra a esta escala. */
+.meme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;margin-bottom:18px}
+.meme-tile{position:relative;display:block;aspect-ratio:1;overflow:hidden;background:var(--bone);border:1px solid var(--hair)}
+.meme-tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s ease}
+.meme-tile:hover img{transform:scale(1.04)}
+.meme-overlay{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:6px;
+  padding:5px 7px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:#fff;opacity:0;transition:opacity .15s ease}
+.meme-tile:hover .meme-overlay{opacity:1}
+.meme-fuente{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase}
+.meme-vistas{flex:0 0 auto}

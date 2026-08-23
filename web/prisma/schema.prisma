@@ -478,6 +478,9 @@ model Senal {
   url          String?
   autor        String?
   idioma       String?
+  /// URL directa a la imagen de origen (Telegram, de momento). No se realoja
+  /// aquí: si el mensaje se borra en origen, la imagen deja de cargar.
+  imagenUrl    String?
   /// Fuerza de la señal en las unidades de su fuente: visitas, puntuación, likes.
   /// No es comparable entre fuentes y no se pretende que lo sea.
   metrica      Float?

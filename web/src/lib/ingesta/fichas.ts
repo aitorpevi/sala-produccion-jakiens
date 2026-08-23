@@ -22,6 +22,8 @@ export const NOMBRE_FUENTE: Record<Fuente, string> = {
   HACKERNEWS: "Hacker News",
   RSS: "Medios y newsletters",
   REDDIT: "Reddit",
+  TELEGRAM: "Telegram · canales",
+  YOUTUBE: "YouTube · tendencias",
 };
 
 export type FichaFuente = {
@@ -98,6 +100,23 @@ export const FICHAS: Record<Fuente, FichaFuente> = {
       "Baja: 403 y 429 en todas las pruebas desde este entorno, incluso con 9 segundos entre peticiones.",
     riesgo:
       "Puede que desde producción responda mejor, o peor — los rangos de datacenter suelen estar más vigilados que una IP residencial. Queda montado con tolerancia total al fallo: si no trae nada, no rompe ni avisa de más de lo justo.",
+    admiteVigilados: true,
+  },
+  TELEGRAM: {
+    cualitativo:
+      "Chollos, humor y noticias en canales masivos españoles que no viven en ningún otro sitio de esta lista. Va directo a la vista previa pública del canal, no a la API de cliente. También trae la imagen y las vistas de cada publicación, aunque no tenga texto — es lo que alimenta el módulo de memes.",
+    coste: "Gratis, sin clave. Es scraping de HTML, no una API — puede romperse si Telegram cambia la plantilla.",
+    fiabilidad:
+      "Alta en los canales verificados uno a uno (contenido real comprobado, no solo HTTP 200). Ojo: varios @handles obvios están okupados por cuentas que venden el nombre y devuelven HTML con mensajes reales pero irrelevantes — antes de añadir un canal nuevo hay que mirar el contenido, no solo si responde.",
+    admiteVigilados: true,
+  },
+  YOUTUBE: {
+    cualitativo:
+      "Top de vídeos en tendencia en España, con la opción de acotar por categoría (cine, tecnología, entretenimiento...). Salseo, música y gaming del día, en cifras de visitas reales.",
+    coste: "Gratis con cuota (10.000 unidades/día, esta consulta gasta 1). Requiere una API key de Google Cloud.",
+    fiabilidad: "Alta. Verificada con clave real: trae el top de España con vistas correctas.",
+    riesgo:
+      "Sin YOUTUBE_API_KEY en el entorno, la pasada falla con error claro en vez de dar cero resultados en silencio. Vigilar la cuota (10.000 unidades/día): no hay facturación por exceso, la petición se corta sola.",
     admiteVigilados: true,
   },
 };

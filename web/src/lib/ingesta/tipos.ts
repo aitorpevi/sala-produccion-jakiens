@@ -15,6 +15,8 @@ export const FUENTES = [
   "RSS",
   "REDDIT",
   "BLUESKY_TRENDS",
+  "TELEGRAM",
+  "YOUTUBE",
 ] as const;
 export type Fuente = (typeof FUENTES)[number];
 
@@ -37,6 +39,7 @@ export type SenalNueva = {
   texto?: string | null;
   url?: string | null;
   autor?: string | null;
+  imagenUrl?: string | null;
   idioma?: string | null;
   metrica?: number | null;
   tema?: string | null;

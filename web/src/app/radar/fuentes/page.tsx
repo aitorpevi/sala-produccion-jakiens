@@ -29,6 +29,8 @@ const AYUDA_TERMINO: Record<Fuente, string> = {
   HACKERNEWS: "Una palabra para filtrar la portada. Vacío = toda la portada.",
   RSS: "La URL del feed, p. ej. https://www.dezeen.com/feed/",
   REDDIT: "El nombre del subreddit, con o sin r/, p. ej. streetwear",
+  TELEGRAM: "El @handle público del canal, sin arroba, p. ej. chollometro",
+  YOUTUBE: "El ID de categoría de YouTube, p. ej. 24 (Entretenimiento). Vacío = top general de España.",
 };
 
 const numero = (n: number) => Math.round(n).toLocaleString("es-ES");

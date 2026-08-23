@@ -9,6 +9,8 @@ import { ingerirRss } from "./rss";
 import { ingerirGdelt } from "./gdelt";
 import { ingerirReddit } from "./reddit";
 import { ingerirBlueskyTrends } from "./blueskyTrends";
+import { ingerirTelegram } from "./telegram";
+import { ingerirYoutube } from "./youtube";
 
 export { FUENTES, VERTICALES } from "./tipos";
 export type { Fuente, Vertical } from "./tipos";
@@ -24,6 +26,8 @@ const INGESTORES: Record<Fuente, Ingestor> = {
   GDELT: ingerirGdelt,
   REDDIT: ingerirReddit,
   BLUESKY_TRENDS: ingerirBlueskyTrends,
+  TELEGRAM: ingerirTelegram,
+  YOUTUBE: ingerirYoutube,
 };
 
 export type Resultado = {
@@ -81,6 +85,7 @@ export async function ingerir(fuente: Fuente): Promise<Resultado> {
         texto: s.texto ?? null,
         url: s.url ?? null,
         autor: s.autor ?? null,
+        imagenUrl: s.imagenUrl ?? null,
         idioma: s.idioma ?? null,
         metrica: s.metrica ?? null,
         tema: s.tema ?? null,

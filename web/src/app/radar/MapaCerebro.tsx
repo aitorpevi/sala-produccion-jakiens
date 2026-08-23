@@ -27,6 +27,8 @@ const QUE_APORTA: Record<string, string> = {
   HACKERNEWS: "Señal temprana de tecnología",
   RSS: "Criterio editorial ya filtrado",
   REDDIT: "Conversación de nicho",
+  TELEGRAM: "Chollos, humor y canales masivos",
+  YOUTUBE: "Vídeos en tendencia por región",
 };
 
 export type FilaFuente = {

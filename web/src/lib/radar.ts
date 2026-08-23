@@ -101,6 +101,22 @@ export async function saludDeFuentes() {
   return { porFuente, ultima };
 }
 
+/**
+ * Imágenes (memes) ordenadas por interacción, sin importar de qué fuente
+ * vengan — el módulo de memes es visual, no una tarjeta más por fuente.
+ *
+ * Ordena por vistas/likes según la unidad de cada fuente, igual que
+ * `destacadoDe`: no se normaliza entre fuentes, solo se usa como orden dentro
+ * de cada una a la vez que se listan todas juntas.
+ */
+export async function imagenesDestacadas(cuantas = 60) {
+  return db.senal.findMany({
+    where: { vertical: "MEME", imagenUrl: { not: null } },
+    orderBy: [{ metrica: { sort: "desc", nulls: "last" } }, { publicadaEn: "desc" }],
+    take: cuantas,
+  });
+}
+
 // ---------- Métricas por fuente, para la pantalla de gestión ----------
 
 export type MetricasFuente = {

@@ -28,6 +28,7 @@ const FUENTES_CON_TARJETA = [
   { fuente: "BLUESKY", etiqueta: "Lo más comentado (Bluesky)" },
   { fuente: "RSS", etiqueta: "Medios y newsletters" },
   { fuente: "HACKERNEWS", etiqueta: "Señal temprana (Hacker News)" },
+  { fuente: "TELEGRAM", etiqueta: "Canales (Telegram)" },
 ];
 
 function haceCuanto(d: Date | null) {
@@ -50,7 +51,7 @@ export default async function RadarPage({
   const { vertical: v } = await searchParams;
   const vertical = v && VERTICALES.includes(v as never) ? v : undefined;
 
-  const [total, movimiento, tendencias, conversacion, medios, tech, salud, vigilados, porVertical] =
+  const [total, movimiento, tendencias, conversacion, medios, tech, canales, salud, vigilados, porVertical] =
     await Promise.all([
       db.senal.count(vertical ? { where: { vertical } } : {}),
       // Antes no recibía `vertical`: filtrar cambiaba los demás paneles pero no
@@ -60,6 +61,7 @@ export default async function RadarPage({
       destacadoDe("BLUESKY", 6, vertical),
       recienteDe("RSS", 8, vertical),
       destacadoDe("HACKERNEWS", 5, vertical),
+      recienteDe("TELEGRAM", 8, vertical),
       saludDeFuentes(),
       db.temaSeguido.groupBy({ by: ["fuente"], where: { activo: true }, _count: true }),
       db.senal.groupBy({ by: ["vertical"], _count: true }),
@@ -121,6 +123,9 @@ export default async function RadarPage({
             <span>
               {numero(total)} señales · actualizado {haceCuanto(ultimaPasada ?? null)}
             </span>
+            <Link href="/radar/memes" className="btn ghost">
+              Memes
+            </Link>
             <Link href="/radar/fuentes" className="btn ghost">
               Gestionar fuentes
             </Link>
@@ -300,6 +305,30 @@ export default async function RadarPage({
                     <div className="fn">{s.titulo}</div>
                     <div className="fd">
                       {numero(s.metrica ?? 0)} puntos · {haceCuanto(s.publicadaEn)}
+                    </div>
+                  </div>
+                  {s.url ? (
+                    <a className="btn ghost" href={s.url} target="_blank" rel="noreferrer noopener">
+                      Abrir
+                    </a>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {canales.length > 0 ? (
+            <div className="panel" data-fuente="TELEGRAM">
+              <div className="phdr">
+                <h3>Canales</h3>
+                <span className="tag">Telegram</span>
+              </div>
+              {canales.map((s) => (
+                <div className="file" key={s.id}>
+                  <div className="fmeta">
+                    <div className="fn">{s.titulo}</div>
+                    <div className="fd">
+                      {s.tema} · {haceCuanto(s.publicadaEn)}
                     </div>
                   </div>
                   {s.url ? (
