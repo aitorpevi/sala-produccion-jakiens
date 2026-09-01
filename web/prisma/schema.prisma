@@ -25,9 +25,21 @@ model StaffUser {
   passwordHash String
   name         String
   tier         StaffTier
+  /**
+   * Acceso al presupuesto de VENTA — lo que se cotiza al cliente.
+   *
+   * Va aparte del `tier` a propósito. El nivel decide qué fases se ven; esto
+   * decide quién ve la cifra que se le pasa al cliente, y las dos cosas no se
+   * solapan: Carmen es nivel LOGISTICS y sí ve costes para negociar tarifas,
+   * pero no ve lo que cobramos. Meterlo en el tier obligaría a inventar un
+   * nivel nuevo por cada combinación.
+   */
+  accesoPresupuestoVenta Boolean @default(false)
   createdAt    DateTime  @default(now())
 
-  hitos Hito[]
+  hitos                    Hito[]
+  asignaciones             AsignacionEtapa[]
+  presupuestosActualizados PresupuestoVenta[]
 }
 
 // ---------- Proyecto ----------
@@ -106,6 +118,8 @@ model Project {
 
   phaseStates      PhaseState[]
   hitos            Hito[]
+  asignaciones     AsignacionEtapa[]
+  presupuestoVenta PresupuestoVenta?
   members          ProjectMember[]
   materials        Material[]
   callSheetDays    CallSheetDay[]
@@ -209,6 +223,75 @@ model Hito {
   // Evita duplicar un hito derivado cada vez que se regenera su origen. En
   // Postgres varios NULL no colisionan, así que los manuales quedan libres.
   @@unique([origen, origenId])
+}
+
+// ---------- Quién trabaja cada etapa ----------
+
+/**
+ * Una persona del equipo interno asignada a un proyecto EN UNA ETAPA CONCRETA.
+ *
+ * El equipo cambia según la etapa y por eso la asignación cuelga de las dos
+ * cosas: en venta trabajan creativos y montadores preparando la presentación,
+ * en preproducción entra un producer que antes no estaba, y en postpo vuelven
+ * los de montaje. Guardar "quién trabaja en este proyecto" a secas perdería
+ * justo la información que hace falta para saber quién tiene qué encima esta
+ * semana.
+ *
+ * Es para el equipo interno (`StaffUser`), no para colaboradores externos: esos
+ * ya viven en `ProjectMember`, con su tarifa, sus jornadas y su alta laboral.
+ * Son dos cosas distintas —una es reparto de trabajo, la otra es contratación—
+ * y unificarlas obligaría a inventar tarifas para gente que va en nómina.
+ *
+ * `responsable` marca al lead de la etapa: quien nutre la información y a quien
+ * se le pregunta. Debería haber uno por etapa, pero no se fuerza en el modelo:
+ * hay semanas en que un proyecto cambia de manos y tener cero o dos durante un
+ * par de días es la realidad, no un error que deba bloquear el guardado.
+ */
+model AsignacionEtapa {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  staffUserId String
+  staff       StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  etapa       Etapa
+  /// Qué hace en esta etapa: "Producer", "Montaje", "Cotización"... Texto libre
+  /// porque el reparto real no cabe en una lista cerrada.
+  rol         String?
+  responsable Boolean   @default(false)
+  creadoEn    DateTime  @default(now())
+
+  @@unique([projectId, staffUserId, etapa])
+  // "Qué me toca a mí" consulta por persona y etapa.
+  @@index([staffUserId, etapa])
+}
+
+// ---------- Presupuesto de venta ----------
+
+/**
+ * Lo que se cotiza al cliente.
+ *
+ * Tabla aparte y no un campo de `Project` porque su visibilidad es distinta de
+ * la del resto del proyecto: la ve un grupo concreto de personas
+ * (`StaffUser.accesoPresupuestoVenta`) y no todo el que puede abrir la ficha. Si
+ * fuese una columna de `Project`, cualquier consulta que devuelva el proyecto la
+ * arrastraría, y bastaría un olvido en una pantalla nueva para filtrarla.
+ *
+ * No confundir con el presupuesto de COSTE, que es lo que pagamos y ya vive
+ * repartido en `ProjectMember.rate`, `dias` y `presupuestoGasto`.
+ */
+model PresupuestoVenta {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// Importe cotizado en euros enteros, como el resto de cifras de la app.
+  importe   Int?
+  estado    String  @default("borrador") // borrador | enviado | aprobado | rechazado
+  notas     String? @db.Text
+  enviadoEn DateTime?
+
+  actualizadoEn    DateTime   @updatedAt
+  actualizadoPorId String?
+  actualizadoPor   StaffUser? @relation(fields: [actualizadoPorId], references: [id], onDelete: SetNull)
 }
 
 // ---------- Personas ----------

@@ -6,12 +6,27 @@ import { TopBar } from "@/components/AppShell";
 import { ETAPAS, ESTADOS, etapa as etapaDe, ordenEtapa } from "@/lib/etapas";
 import { TIPOS_HITO, etiquetaFecha, urgencia } from "@/lib/hitos";
 import { MARCAS } from "@/lib/marcas";
+import { ESTADOS_PRESUPUESTO_VENTA, etiquetaEstadoPresupuesto } from "@/lib/presupuesto-venta";
 import {
   actualizarSituacionAction,
+  asignarAction,
   borrarHitoAction,
   crearHitoAction,
+  desasignarAction,
+  guardarPresupuestoVentaAction,
   marcarGanadoAction,
 } from "./actions";
+
+const eur = (n: number) => "€" + n.toLocaleString("es-ES");
+
+/** "Chiara" → "CH". Para el cuadradito de la ficha, igual que el código de proyecto. */
+const iniciales = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .map((p) => p[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
 /**
  * Ficha de proyecto del gestor.
@@ -27,9 +42,18 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
 
   const project = await db.project.findUnique({
     where: { code },
-    include: { hitos: { orderBy: { fecha: "asc" } } },
+    include: {
+      hitos: { orderBy: { fecha: "asc" } },
+      asignaciones: { include: { staff: true }, orderBy: { creadoEn: "asc" } },
+      // El presupuesto de venta ni siquiera se consulta si quien mira no tiene
+      // permiso. Traerlo y luego no pintarlo lo dejaría en el HTML del
+      // servidor, al alcance de cualquiera que abra el inspector.
+      presupuestoVenta: staff.accesoPresupuestoVenta,
+    },
   });
   if (!project) notFound();
+
+  const equipo = await db.staffUser.findMany({ orderBy: { name: "asc" } });
 
   const hoy = new Date();
   const info = etapaDe(project.etapa);
@@ -172,6 +196,171 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
             </div>
           </form>
         </div>
+
+        <div className="panel">
+          <div className="phdr">
+            <h3>Quién lo trabaja</h3>
+            <span className="tag">
+              {project.asignaciones.length}{" "}
+              {project.asignaciones.length === 1 ? "asignación" : "asignaciones"}
+            </span>
+          </div>
+
+          {ETAPAS.map((e) => {
+            const enEtapa = project.asignaciones.filter((a) => a.etapa === e.clave);
+            if (enEtapa.length === 0) return null;
+            return (
+              <div key={e.clave}>
+                <div className="sub-hdr" style={{ ["--etapa" as string]: e.color }}>
+                  <span className="etapa-punto" />
+                  {e.label}
+                </div>
+                {enEtapa.map((a) => (
+                  <div className="file" key={a.id}>
+                    <div className="ic" data-ext={iniciales(a.staff.name)}></div>
+                    <div className="fmeta">
+                      <div className="fn">
+                        {a.staff.name}
+                        {a.responsable ? " · responsable" : ""}
+                      </div>
+                      <div className="fd">{a.rol || "Sin rol definido"}</div>
+                    </div>
+                    <form action={desasignarAction}>
+                      <input type="hidden" name="code" value={project.code} />
+                      <input type="hidden" name="id" value={a.id} />
+                      <button className="btn ghost" type="submit">
+                        Quitar
+                      </button>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+
+          {project.asignaciones.length === 0 ? (
+            <div className="empty">
+              <span className="em-mono">Nadie asignado</span>
+              El equipo cambia según la etapa. Apunta abajo quién entra en cada una.
+            </div>
+          ) : null}
+
+          <form action={asignarAction} className="alta">
+            <div className="fgrid">
+              <div className="field">
+                <label htmlFor="staffUserId">Persona</label>
+                <select id="staffUserId" name="staffUserId" required>
+                  {equipo.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="etapa-asig">Etapa</label>
+                <select id="etapa-asig" name="etapa" defaultValue={project.etapa}>
+                  {ETAPAS.map((e) => (
+                    <option key={e.clave} value={e.clave}>
+                      {e.n} · {e.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="rol">Qué hace</label>
+                <input id="rol" name="rol" placeholder="Ej. Producer, Montaje, Cotización" />
+              </div>
+              <div className="field">
+                <label htmlFor="responsable">Responsable de la etapa</label>
+                <label className="check">
+                  <input id="responsable" name="responsable" type="checkbox" />
+                  <span>Es quien nutre la información y a quien se le pregunta</span>
+                </label>
+              </div>
+            </div>
+            <input type="hidden" name="code" value={project.code} />
+            <div className="form-foot">
+              <span className="hint">Solo equipo de casa — los colaboradores externos van en la sala de producción</span>
+              <button className="btn solid" type="submit">
+                Asignar
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {staff.accesoPresupuestoVenta ? (
+          <div className="panel confidencial">
+            <div className="phdr">
+              <h3>Presupuesto de venta</h3>
+              <span className="tag">Confidencial</span>
+            </div>
+            <div className="file">
+              <div className="fmeta">
+                <div className="fn">
+                  {project.presupuestoVenta?.importe != null
+                    ? eur(project.presupuestoVenta.importe)
+                    : "Sin cifra todavía"}
+                </div>
+                <div className="fd">
+                  {project.presupuestoVenta
+                    ? etiquetaEstadoPresupuesto(project.presupuestoVenta.estado)
+                    : "En preparación"}
+                  {project.presupuestoVenta?.enviadoEn
+                    ? ` · enviado ${etiquetaFecha(project.presupuestoVenta.enviadoEn)}`
+                    : ""}
+                </div>
+              </div>
+            </div>
+            <form action={guardarPresupuestoVentaAction} className="alta">
+              <div className="fgrid">
+                <div className="field">
+                  <label htmlFor="importe">Importe cotizado (€)</label>
+                  <input
+                    id="importe"
+                    name="importe"
+                    inputMode="numeric"
+                    defaultValue={project.presupuestoVenta?.importe ?? ""}
+                    placeholder="45000"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="estado-presu">Estado</label>
+                  <select
+                    id="estado-presu"
+                    name="estado"
+                    defaultValue={project.presupuestoVenta?.estado ?? "borrador"}
+                  >
+                    {Object.entries(ESTADOS_PRESUPUESTO_VENTA).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field full">
+                  <label htmlFor="notas-presu">Notas</label>
+                  <textarea
+                    id="notas-presu"
+                    name="notas"
+                    rows={2}
+                    defaultValue={project.presupuestoVenta?.notas ?? ""}
+                    placeholder="Qué incluye, qué se dejó fuera, con qué margen."
+                  />
+                </div>
+              </div>
+              <input type="hidden" name="code" value={project.code} />
+              <div className="form-foot">
+                <span className="hint">
+                  Esto es lo que cobramos al cliente, no lo que nos cuesta producirlo
+                </span>
+                <button className="btn solid" type="submit">
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : null}
 
         <div className="panel">
           <div className="phdr">

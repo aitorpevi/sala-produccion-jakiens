@@ -9,6 +9,56 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-01 · MacBook · Paso 3: equipo por etapa y presupuesto de venta (rama `gestor-proyectos`)
+
+**Esquema** (migración `20260901160000_asignaciones_y_presupuesto_venta`, solo
+añade — se puede aplicar con la app en marcha):
+
+- `AsignacionEtapa` — quién del equipo interno trabaja un proyecto **en qué
+  etapa**, con rol libre y un flag `responsable` para el lead de la etapa. La
+  clave única es `(proyecto, persona, etapa)`: reasignar actualiza el rol en vez
+  de fallar, porque el caso real es "y además lleva la cotización".
+- `PresupuestoVenta` — lo que se cotiza al cliente, con importe, estado, notas y
+  quién lo tocó por última vez.
+- `StaffUser.accesoPresupuestoVenta` — entra en `false` para todos y se decide a
+  mano en el seed. Nadie hereda este acceso de su nivel.
+
+**Por qué el permiso de venta va por usuario y no por `tier`**: Carmen es
+LOGISTICS, sí ve costes para negociar tarifas y no ve lo que cobramos. Meterlo en
+el tier obligaría a inventar un nivel por cada combinación. Hoy lo tienen Javier,
+Aitor, Aina, Chiara y Maca.
+
+**El dato confidencial ni se consulta** cuando quien mira no tiene permiso
+(`include: { presupuestoVenta: staff.accesoPresupuestoVenta }`). Traerlo y luego
+no pintarlo lo dejaría en el HTML que sale del servidor.
+
+**Corregido de la lista pendiente**: `veCostes` en `p/[code]/prepro/page.tsx`
+pasa de `tier === "FULL"` a incluir también `LOGISTICS`, como decía
+`REQUISITOS.md` §9 y confirmó Aitor. Pablo y Carmen ya ven las tarifas por
+colaborador.
+
+**Verificado en el navegador**: asignados Javier (responsable) y Miquel a la
+etapa de venta de EG-2611, y guardado un presupuesto de 48.500 € en estado
+"enviado" —la fecha de envío se sella sola—. Con la cuenta de **Carmen**, el
+HTML que devuelve el servidor no contiene ni el importe ni las notas, y el panel
+no existe; las asignaciones sí las ve. Un intento de escribir el presupuesto
+como Carmen replicando el `ACTION_ID` a pelo dejó el dato intacto (devolvió 500,
+así que probablemente Next rechazó la petición antes de llegar a la acción; la
+comprobación de permiso está igualmente en la propia acción).
+
+`tsc --noEmit` limpio, `npm run build` completo, lint en los mismos 6 avisos
+preexistentes.
+
+**Pendiente / a decidir:**
+
+- **Mikko** es FULL pero no tiene acceso al presupuesto de venta: es dirección
+  creativa y no interviene en la cotización. Una línea de cambiar si toca.
+- **Jakie** aparece en el equipo de cotización según la descripción del proceso,
+  pero no existe como `StaffUser` — no está entre las 11 cuentas del seed.
+- Las fechas siguen siendo editables por cualquier nivel, confirmado por Aitor.
+
+---
+
 ## 2026-09-01 · MacBook · Paso 2: la etapa de venta (rama `gestor-proyectos`)
 
 Primeras pantallas del gestor. Un proyecto ya puede existir antes de ganarse.

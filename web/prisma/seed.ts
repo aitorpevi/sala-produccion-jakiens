@@ -162,13 +162,25 @@ const MATERIALS = [
   },
 ];
 
-const STAFF: { name: string; email: string; tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION" }[] = [
-  { name: "Javier", email: "javier@jakiens.com", tier: "FULL" },
-  { name: "Aina", email: "aina@jakiens.com", tier: "FULL" },
-  { name: "Chiara", email: "chiara@jakiens.com", tier: "FULL" },
+/**
+ * `venta` es el acceso al presupuesto de VENTA (lo que se cotiza al cliente), y
+ * no se deduce del nivel: Carmen es LOGISTICS y sí ve costes para negociar
+ * tarifas, pero no lo que cobramos. Mikko queda fuera por ahora —es dirección
+ * creativa y no interviene en la cotización— pero es una línea de cambiar si
+ * hace falta.
+ */
+const STAFF: {
+  name: string;
+  email: string;
+  tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION";
+  venta?: boolean;
+}[] = [
+  { name: "Javier", email: "javier@jakiens.com", tier: "FULL", venta: true },
+  { name: "Aina", email: "aina@jakiens.com", tier: "FULL", venta: true },
+  { name: "Chiara", email: "chiara@jakiens.com", tier: "FULL", venta: true },
   { name: "Mikko", email: "mikko@jakiens.com", tier: "FULL" },
-  { name: "Aitor", email: "aitor@jakiens.com", tier: "FULL" },
-  { name: "Maca", email: "maca@jakiens.com", tier: "FULL" },
+  { name: "Aitor", email: "aitor@jakiens.com", tier: "FULL", venta: true },
+  { name: "Maca", email: "maca@jakiens.com", tier: "FULL", venta: true },
   { name: "Pablo", email: "pablo@jakiens.com", tier: "LOGISTICS" },
   { name: "Carmen", email: "carmen@jakiens.com", tier: "LOGISTICS" },
   { name: "Malo", email: "malo@jakiens.com", tier: "POSTPRODUCTION" },
@@ -187,11 +199,12 @@ async function main() {
     const tempPassword = tempPasswordFor(s.name);
     await db.staffUser.upsert({
       where: { email: s.email },
-      update: { name: s.name, tier: s.tier },
+      update: { name: s.name, tier: s.tier, accesoPresupuestoVenta: s.venta ?? false },
       create: {
         email: s.email,
         name: s.name,
         tier: s.tier,
+        accesoPresupuestoVenta: s.venta ?? false,
         passwordHash: await bcrypt.hash(tempPassword, 10),
       },
     });

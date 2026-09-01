@@ -229,6 +229,24 @@ form.alta{padding:16px}
   .hito-proximo{display:none}
 }
 
+/* Subcabecera dentro de un panel, para agrupar filas por etapa. */
+.sub-hdr{
+  display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--bone);
+  border-bottom:1px solid var(--hair);
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke)}
+
+/* Casilla con su explicación al lado, para las que no se entienden solas. */
+.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--smoke);line-height:1.35;padding-top:3px}
+.check input{width:auto;flex:none;margin-top:2px}
+
+/* Bloque con dato confidencial. La banda no decora: avisa de que lo que hay
+   dentro no lo ve todo el mundo, para que nadie lo lea en alto en una reunión
+   dando por hecho que sí. */
+.panel.confidencial{border-left:3px solid var(--ink)}
+.panel.confidencial > .phdr{background:var(--ink)}
+.panel.confidencial > .phdr h3{color:var(--paper)}
+.panel.confidencial > .phdr .tag{color:var(--mist)}
+
 /* ---------- Radar: termómetro y maquetación modular ---------- */
 /* Par divergente validado (dataviz skill): naranja=sube, azul=se enfría.
    Pasa las seis comprobaciones del validador en claro y en oscuro. Nunca

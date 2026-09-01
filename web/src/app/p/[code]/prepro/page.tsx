@@ -37,8 +37,13 @@ export default async function PreproPage({
   const totalHonorarios = conCoste.reduce((s, m) => s + m.rate * m.dias, 0);
   const totalGasto = conCoste.reduce((s, m) => s + m.presupuestoGasto, 0);
 
-  // El presupuesto solo lo ve quien tiene acceso a contabilidad.
-  const veCostes = staff.tier === "FULL";
+  // Los COSTES los ven también Pablo y Carmen (LOGISTICS): son quienes negocian
+  // las tarifas con los colaboradores, y no verlas les obligaba a preguntarlas
+  // por WhatsApp, que es justo lo que la herramienta vino a quitar. Lo que no
+  // ven es el presupuesto de VENTA, que vive aparte y con su propio permiso
+  // (ver StaffUser.accesoPresupuestoVenta). Antes esto era `tier === "FULL"`,
+  // más restrictivo de lo que describe REQUISITOS.md §9.
+  const veCostes = staff.tier === "FULL" || staff.tier === "LOGISTICS";
 
   const [necesidades, puestos] = await Promise.all([
     db.necesidad.findMany({

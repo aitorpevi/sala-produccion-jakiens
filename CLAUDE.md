@@ -57,11 +57,19 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   al crear el proyecto y **nunca se actualiza** — la barra de fases del
   `AppShell` lee la constante `PHASE_STATE` de `phases.ts`, no la tabla, así que
   hoy todos los proyectos muestran las mismas fases. Es deuda conocida.
-- **Presupuesto de venta ≠ presupuesto de coste.** Lo que hoy la app llama
-  "presupuesto" es coste (`ProjectMember.rate × dias` + `presupuestoGasto`). Lo
-  que se cobra al cliente no está modelado. Son dos cosas con permisos
-  distintos: Carmen ve coste pero **no** ve venta, así que la venta necesita su
-  propia lista de acceso y no basta con estirar `StaffTier`.
+- **Presupuesto de venta ≠ presupuesto de coste.** El **coste** (lo que pagamos)
+  vive repartido en `ProjectMember.rate`, `dias` y `presupuestoGasto`, y lo ven
+  los niveles `FULL` y `LOGISTICS` —Pablo y Carmen negocian tarifas—. La
+  **venta** (lo que cobramos) vive en `PresupuestoVenta`, tabla aparte, y la ve
+  solo quien tenga `StaffUser.accesoPresupuestoVenta`: hoy Javier, Aitor, Aina,
+  Chiara y Maca. Carmen ve coste pero **no** ve venta, y por eso el permiso va
+  por usuario y no por `tier`.
+  El dato confidencial **ni se consulta** si quien mira no tiene permiso: traerlo
+  y no pintarlo lo dejaría en el HTML del servidor.
+- **Equipo interno ≠ colaboradores.** `AsignacionEtapa` reparte trabajo entre el
+  equipo de casa (`StaffUser`) por proyecto **y etapa**, porque el equipo cambia
+  en cada una. `ProjectMember` es otra cosa: la contratación de colaboradores
+  externos, con tarifa, jornadas y alta laboral. No unificarlas.
 - **Cifrado en la aplicación, no solo en la base.** `src/lib/db.ts` cifra y
   descifra de forma transparente vía extensión de Prisma. Escribas la consulta
   que escribas, los campos de `CAMPOS_CIFRADOS` salen descifrados y entran

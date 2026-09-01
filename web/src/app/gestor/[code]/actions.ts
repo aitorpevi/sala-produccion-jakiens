@@ -8,6 +8,7 @@ import { CLAVES_ETAPA } from "@/lib/etapas";
 import { fechaDesdeInput } from "@/lib/hitos";
 import type { Etapa, EstadoProyecto, TipoHito } from "@/generated/prisma/enums";
 import { TIPOS_HITO } from "@/lib/hitos";
+import { ESTADOS_PRESUPUESTO_VENTA } from "@/lib/presupuesto-venta";
 
 /** Mover un proyecto de etapa o cambiar su estado es decisión de dirección. */
 async function requireFull() {
@@ -102,6 +103,89 @@ export async function crearHitoAction(formData: FormData) {
       fechaFin: fin,
       responsableId: staff.id,
     },
+  });
+
+  revalidatePath(`/gestor/${code}`);
+}
+
+// ---------- Equipo por etapa ----------
+
+/**
+ * Asigna a alguien del equipo interno a una etapa del proyecto.
+ *
+ * Lo puede hacer cualquier nivel, igual que las fechas: quien lleva una etapa
+ * sabe mejor que nadie a quién necesita, y pedir permiso a dirección para
+ * apuntar quién está trabajando convertiría la herramienta en un trámite.
+ */
+export async function asignarAction(formData: FormData) {
+  await requireStaff();
+  const code = String(formData.get("code") ?? "");
+  const staffUserId = String(formData.get("staffUserId") ?? "");
+  const etapa = String(formData.get("etapa") ?? "") as Etapa;
+  const rol = String(formData.get("rol") ?? "").trim();
+  const responsable = formData.get("responsable") === "on";
+
+  const project = await db.project.findUnique({ where: { code } });
+  if (!project || !staffUserId || !CLAVES_ETAPA.includes(etapa)) return;
+
+  // Reasignar a alguien que ya estaba en esa etapa actualiza su rol en vez de
+  // fallar: el caso real es "ah, y además lleva la cotización", no un error.
+  await db.asignacionEtapa.upsert({
+    where: { projectId_staffUserId_etapa: { projectId: project.id, staffUserId, etapa } },
+    create: { projectId: project.id, staffUserId, etapa, rol: rol || null, responsable },
+    update: { rol: rol || null, responsable },
+  });
+
+  revalidatePath(`/gestor/${code}`);
+}
+
+export async function desasignarAction(formData: FormData) {
+  await requireStaff();
+  const code = String(formData.get("code") ?? "");
+  const id = String(formData.get("id") ?? "");
+
+  await db.asignacionEtapa.deleteMany({ where: { id } });
+  revalidatePath(`/gestor/${code}`);
+}
+
+// ---------- Presupuesto de venta ----------
+
+/**
+ * Guarda lo que se cotiza al cliente.
+ *
+ * El permiso se comprueba aquí y también al leer, no solo escondiendo el
+ * formulario: un `POST` a mano desde la consola es trivial, y esta es la cifra
+ * más sensible que maneja la herramienta después de los datos fiscales.
+ */
+export async function guardarPresupuestoVentaAction(formData: FormData) {
+  const staff = await requireStaff();
+  if (!staff.accesoPresupuestoVenta) return;
+
+  const code = String(formData.get("code") ?? "");
+  const project = await db.project.findUnique({ where: { code } });
+  if (!project) return;
+
+  const bruto = String(formData.get("importe") ?? "").replace(/[^\d]/g, "");
+  const importe = bruto ? Number(bruto) : null;
+  const estado = String(formData.get("estado") ?? "borrador");
+  const notas = String(formData.get("notas") ?? "").trim();
+
+  if (!(estado in ESTADOS_PRESUPUESTO_VENTA)) return;
+
+  const datos = {
+    importe,
+    estado,
+    notas: notas || null,
+    actualizadoPorId: staff.id,
+    // La fecha de envío se sella sola al pasar a "enviado": es un dato que
+    // luego se consulta ("¿cuándo mandamos esto?") y nadie lo apunta a mano.
+    enviadoEn: estado === "enviado" ? new Date() : undefined,
+  };
+
+  await db.presupuestoVenta.upsert({
+    where: { projectId: project.id },
+    create: { projectId: project.id, ...datos, enviadoEn: datos.enviadoEn ?? null },
+    update: datos,
   });
 
   revalidatePath(`/gestor/${code}`);
