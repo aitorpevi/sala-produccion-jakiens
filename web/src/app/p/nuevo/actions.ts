@@ -59,7 +59,12 @@ export async function createProjectAction(formData: FormData) {
       primeraEntregaMontaje,
       driveFolderUrl,
       slackWebhookUrl,
-      status: "activo",
+      // Este alta sigue siendo la de un proyecto ya ganado: la crea el nivel
+      // FULL tras el GO y desemboca en la fase Equipo. El alta de una
+      // oportunidad en VENTA es otra puerta, y llega en el siguiente paso del
+      // gestor de proyectos.
+      etapa: "PREPRODUCCION",
+      estado: "ACTIVO",
     },
   });
 

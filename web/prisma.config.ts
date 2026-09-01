@@ -11,5 +11,10 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
+    // Base desechable que Prisma usa para comprobar que una migración nueva
+    // aplica limpia sobre el historial completo. Solo hace falta en desarrollo
+    // (`migrate dev`): `prisma dev` levanta una para esto, y sin declararla
+    // Prisma intenta reutilizar la principal y falla.
+    shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

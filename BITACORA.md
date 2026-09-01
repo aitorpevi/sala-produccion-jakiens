@@ -9,6 +9,62 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-01 · MacBook · Paso 1: hitos, etapa y estado (rama `gestor-proyectos`)
+
+Primer paso de implementación del gestor. Solo modelo de datos y vocabulario: no
+hay pantallas nuevas todavía.
+
+**Esquema** (migración `20260901140000_gestor_hitos_y_etapa`, escrita a mano):
+
+- `Etapa` (VENTA · PREPRODUCCION · RODAJE · POSTPRODUCCION · CIERRE) y
+  `EstadoProyecto` (OPORTUNIDAD · ACTIVO · PERDIDO · PAUSADO · CERRADO) como
+  enums, más `Project.etapa` y `Project.estado`.
+- `Project.status` (texto `activo | cerrado`) desaparece. La migración **traduce
+  el dato antes de borrar la columna**: `prisma migrate dev` proponía un
+  `DROP COLUMN` a secas que se habría llevado por delante el estado de todos los
+  proyectos.
+- Tabla `Hito` con `fecha`/`fechaFin` como `DATE` real, `tipo`, `criticidad`,
+  `responsable` (StaffUser) y `origen`/`origenId` para los derivados.
+  Índices por `fecha` y por `(projectId, fecha)`.
+
+**Por qué la etapa de los proyectos existentes se queda en PREPRODUCCION**: no se
+puede deducir del dato que hay. `PhaseState` se escribe al crear el proyecto y
+después nunca se actualiza, así que todos figuran eternamente en "equipo". Lo
+único seguro es que ninguno está en VENTA (hasta ahora no había forma de
+registrar una oportunidad). Los cerrados van a CIERRE; el resto se corrigen a
+mano desde el gestor cuando exista la pantalla.
+
+**Código nuevo:**
+
+- `src/lib/etapas.ts` — las cinco etapas con su color, y los estados con si
+  cuentan como vivos. PAUSADO cuenta como vivo: puede volver la semana que viene.
+- `src/lib/hitos.ts` — tipos de hito, criticidad, y `urgencia()` separada de
+  `criticidad` a propósito (una cambia sola cada día, la otra no; mezclarlas en
+  un color impide ver las dos).
+- `scripts/importar-hitos.ts` — convierte las fechas de texto en hitos. Corre en
+  simulación por defecto; escribe con `--aplicar`. Es idempotente.
+
+**El año era el problema real del parseo.** "14 JUL" no dice de qué año es. Se
+deduce del año del propio texto, si no del `shootLabel`, si no del `createdAt`; y
+si la fecha cae más de tres meses antes del alta se asume el año siguiente (un
+proyecto dado de alta en diciembre para rodar en enero). Lo que no se puede leer
+**no se inventa**: se lista para revisarlo a mano. Una fecha inventada en un
+calendario es peor que un hueco, porque el hueco se ve.
+
+**Verificado:** migración aplicada preservando el estado, importación en seco y
+aplicada (6 hitos de CHB-2607, años inferidos bien), segunda pasada idempotente,
+`tsc --noEmit` limpio, `npm run build` completo, y en el navegador tanto el
+listado de activos como la rama de archivados (probando con estado PERDIDO y
+devolviéndolo después). Los avisos de `npm run lint` son todos preexistentes en
+archivos no tocados.
+
+**Pendiente que ha salido por el camino:** la barra de fases del `AppShell` lee
+la constante `PHASE_STATE` en vez de la tabla `PhaseState`, así que todos los
+proyectos muestran las mismas fases en el mismo estado. La tabla se escribe y no
+se lee nunca.
+
+---
+
 ## 2026-09-01 · MacBook · Diseño del Gestor de Proyectos y puesta a punto del portátil
 
 **Contexto.** Primera sesión desde el MacBook (hasta ahora todo el desarrollo

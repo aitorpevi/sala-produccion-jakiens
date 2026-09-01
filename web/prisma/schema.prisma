@@ -26,9 +26,51 @@ model StaffUser {
   name         String
   tier         StaffTier
   createdAt    DateTime  @default(now())
+
+  hitos Hito[]
 }
 
 // ---------- Proyecto ----------
+
+/**
+ * Etapa de negocio: dónde está el proyecto en la vida de la compañía.
+ *
+ * NO confundir con las siete fases operativas de `PhaseState` (equipo, prepro,
+ * materiales, altas, rodaje, postpro, cierre), que son el desglose del trabajo
+ * del producer a partir del GO. La etapa es el eje que ve toda la compañía en el
+ * gestor de proyectos; la fase es el eje que opera el producer dentro de la sala
+ * de producción. Una etapa contiene varias fases, no al revés.
+ *
+ * VENTA es la novedad: hasta ahora un proyecto solo se daba de alta cuando ya se
+ * había ganado, así que la mitad del trabajo de la compañía —la que se hace para
+ * ganarlo— no existía en ninguna herramienta.
+ */
+enum Etapa {
+  VENTA
+  PREPRODUCCION
+  RODAJE
+  POSTPRODUCCION
+  CIERRE
+}
+
+/**
+ * Si el proyecto sigue vivo, y por qué no lo está si no lo está.
+ *
+ * Antes eran dos valores de texto (`activo` | `cerrado`), que bastaban cuando un
+ * proyecto solo se creaba tras ganarlo. Con la etapa de venta hacen falta los
+ * finales que no son un cierre: PERDIDO y PAUSADO.
+ *
+ * PERDIDO no borra ni esconde nada: el proyecto se archiva y se puede consultar.
+ * Lo que se trabajó para intentar ganarlo es tan real como lo que se produce, y
+ * saber cuánto se presentó frente a cuánto se ganó es información de negocio.
+ */
+enum EstadoProyecto {
+  OPORTUNIDAD // en venta, todavía sin decidir
+  ACTIVO // ganado y en marcha
+  PERDIDO // no se ganó — se archiva y se consulta
+  PAUSADO // congelado por el cliente, puede volver
+  CERRADO // entregado y cerrado económicamente
+}
 
 model Project {
   id              String   @id @default(cuid())
@@ -40,7 +82,8 @@ model Project {
   shootLabel      String
   location        String
   format          String
-  status          String   @default("activo") // activo | cerrado
+  etapa           Etapa          @default(PREPRODUCCION)
+  estado          EstadoProyecto @default(ACTIVO)
   // Marca que produce. Jakiens y Ricorico comparten fisco, equipo y directorio de
   // colaboradores: lo que cambia es la escala del proyecto, las plantillas y el
   // discurso comercial, no los datos. Por eso es un campo, no una base separada.
@@ -62,6 +105,7 @@ model Project {
   createdAt       DateTime @default(now())
 
   phaseStates      PhaseState[]
+  hitos            Hito[]
   members          ProjectMember[]
   materials        Material[]
   callSheetDays    CallSheetDay[]
@@ -80,6 +124,91 @@ model PhaseState {
   state     String // done | live | next
 
   @@unique([projectId, key])
+}
+
+// ---------- Hitos: las fechas que ve toda la compañía ----------
+
+/**
+ * Qué clase de fecha es. Determina cómo se pinta en el calendario y qué avisos
+ * genera: un RODAJE bloquea la jornada de todo el equipo, una ENTREGA_CLIENTE
+ * solo compromete a quien la trabaja.
+ */
+enum TipoHito {
+  ENTREGA_PROPUESTA // venta: cuándo hay que presentar
+  PPM // pre-production meeting
+  RODAJE
+  ENTREGA_MATERIAL
+  ENTREGA_MONTAJE
+  ENTREGA_CLIENTE
+  CIERRE_ECONOMICO
+  OTRO
+}
+
+/** Cuánto duele fallar esta fecha, con independencia de lo cerca que esté. */
+enum Criticidad {
+  NORMAL
+  ALTA
+  CRITICA
+}
+
+/**
+ * Una fecha señalada de un proyecto.
+ *
+ * Es la ÚNICA fuente de verdad del calendario, y la única parte del modelo con
+ * fechas de verdad. El resto de la app guarda las fechas como texto libre
+ * ("14 JUL", "24–25 JUL 2026") porque se escriben a mano y así nadie pelea con
+ * formatos; la contrapartida es que sobre ese texto no se puede ordenar, ni
+ * filtrar por trimestre, ni detectar que dos cosas caen el mismo día. Un
+ * calendario trimestral necesita `DateTime`.
+ *
+ * Los campos de texto del proyecto NO desaparecen: se siguen mostrando donde ya
+ * se mostraban, como etiqueta legible. Lo que hace el hito es guardar además la
+ * fecha real detrás.
+ *
+ * `fecha` y `fechaFin` son fechas de calendario, no instantes: un rodaje es el
+ * día 24, no las 00:00 del 24 en un huso concreto. De ahí `@db.Date`.
+ */
+model Hito {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  etapa     Etapa
+  tipo      TipoHito @default(OTRO)
+  titulo    String
+  /// Día del hito. Para un rango (rodaje de varias jornadas, ventana de
+  /// preproducción) es el primer día y `fechaFin` el último.
+  fecha     DateTime  @db.Date
+  fechaFin  DateTime? @db.Date
+  criticidad Criticidad @default(NORMAL)
+  notas     String?
+
+  /// Quién responde de esta fecha. Es del equipo interno: los hitos los mueve
+  /// quien lidera la etapa, no el colaborador que ejecuta.
+  responsableId String?
+  responsable   StaffUser? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+
+  /**
+   * De dónde sale el hito. Los derivados no se editan a mano: se regeneran
+   * desde su origen, porque si el producer cambia la fecha de una jornada en la
+   * orden de rodaje, el calendario tiene que seguirla sin que nadie lo recuerde.
+   *
+   * manual    — lo creó una persona en el gestor
+   * callsheet — proyectado desde CallSheetDay.fechaISO
+   * proyecto  — proyectado desde las fechas de texto del alta de proyecto
+   */
+  origen   String  @default("manual")
+  origenId String?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // El calendario maestro consulta por rango de fechas sobre todos los
+  // proyectos a la vez; la ficha de proyecto, por proyecto.
+  @@index([fecha])
+  @@index([projectId, fecha])
+  // Evita duplicar un hito derivado cada vez que se regenera su origen. En
+  // Postgres varios NULL no colisionan, así que los manuales quedan libres.
+  @@unique([origen, origenId])
 }
 
 // ---------- Personas ----------

@@ -4,6 +4,7 @@ import { requireStaff } from "@/lib/access";
 import { logoutAction } from "@/app/actions";
 import { firstAllowedPhaseForStaff, STAFF_TIER_LABEL } from "@/lib/phases";
 import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
+import { ESTADOS, estaArchivado, estaVivo } from "@/lib/etapas";
 import { IconoRadar } from "@/components/IconoRadar";
 
 export default async function ProyectosPage() {
@@ -11,8 +12,8 @@ export default async function ProyectosPage() {
   const landingPhase = firstAllowedPhaseForStaff(staff.tier);
 
   const projects = await db.project.findMany({ orderBy: { createdAt: "desc" } });
-  const activos = projects.filter((p) => p.status !== "cerrado");
-  const cerrados = projects.filter((p) => p.status === "cerrado");
+  const activos = projects.filter((p) => estaVivo(p.estado));
+  const cerrados = projects.filter((p) => estaArchivado(p.estado));
 
   // Un bloque por productora. El flujo de trabajo es el mismo en las dos, pero
   // verlas separadas evita confundir un rodaje de 40k con una pieza de social.
@@ -111,15 +112,16 @@ export default async function ProyectosPage() {
         {cerrados.length > 0 ? (
           <div className="panel">
             <div className="phdr">
-              <h3>Proyectos cerrados</h3>
+              <h3>Archivados</h3>
               <span className="tag">{cerrados.length}</span>
             </div>
             {cerrados.map((p) => (
               <div className="file" key={p.id}>
-                <div className="ic" data-ext="OK"></div>
+                <div className="ic" data-ext={p.estado === "PERDIDO" ? "NO" : "OK"}></div>
                 <div className="fmeta">
                   <div className="fn">{p.name}</div>
                   <div className="fd">
+                    {ESTADOS[p.estado].label} ·{" "}
                     {MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS]?.nombre ?? "Jakiens"} ·{" "}
                     {p.client} · {p.code}
                   </div>

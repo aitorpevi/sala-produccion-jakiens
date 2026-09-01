@@ -44,9 +44,19 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   eligió a propósito para no pelearse con formatos al escribirlas. La excepción
   es `CallSheetDay.fechaISO`, que se añadió cuando la vista de cliente necesitó
   saber si hoy era día de rodaje. Un calendario maestro no se puede construir
-  sobre texto libre, así que el gestor introduce una tabla `Hito` con `DateTime`
-  real como única fuente de verdad del calendario; los campos de texto se quedan
-  como etiqueta legible.
+  sobre texto libre, así que **la tabla `Hito` es la única fuente de verdad del
+  calendario**, con `DATE` de verdad; los campos de texto se quedan como
+  etiqueta legible y se siguen mostrando donde ya se mostraban.
+  Un hito con `origen` distinto de `manual` es **derivado**: se regenera desde
+  su origen (`scripts/importar-hitos.ts`) y no se edita a mano, porque si el
+  producer cambia una jornada en la orden de rodaje el calendario tiene que
+  seguirla sola.
+- **Etapa y estado.** `Project.etapa` (`src/lib/etapas.ts`) es el eje de negocio;
+  `Project.estado` dice si sigue vivo. Un proyecto PERDIDO se archiva y se
+  consulta, no se borra. `PhaseState` no sirve para deducir la etapa: se escribe
+  al crear el proyecto y **nunca se actualiza** — la barra de fases del
+  `AppShell` lee la constante `PHASE_STATE` de `phases.ts`, no la tabla, así que
+  hoy todos los proyectos muestran las mismas fases. Es deuda conocida.
 - **Presupuesto de venta ≠ presupuesto de coste.** Lo que hoy la app llama
   "presupuesto" es coste (`ProjectMember.rate × dias` + `presupuestoGasto`). Lo
   que se cobra al cliente no está modelado. Son dos cosas con permisos
