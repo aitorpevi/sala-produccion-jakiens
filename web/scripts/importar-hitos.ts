@@ -138,7 +138,8 @@ async function main() {
           create: datos,
           update: datos,
         });
-        previo ? actualizados++ : creados++;
+        if (previo) actualizados++;
+        else creados++;
       } else {
         creados++;
       }
@@ -167,7 +168,8 @@ async function main() {
           create: datos,
           update: datos,
         });
-        previo ? actualizados++ : creados++;
+        if (previo) actualizados++;
+        else creados++;
       } else {
         creados++;
       }

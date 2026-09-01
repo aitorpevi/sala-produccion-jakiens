@@ -21,6 +21,15 @@ export async function requireStaffAccess(code: string, phase: PhaseKey) {
   const project = await db.project.findUnique({ where: { code } });
   if (!project) notFound();
 
+  // Un proyecto en venta todavía no es una producción: no hay equipo que
+  // convocar, ni material que pedir, ni jornadas que planificar. La sala de
+  // producción se abre con el GO, y hasta entonces el proyecto se trabaja en su
+  // ficha del gestor. Se comprueba aquí y no ocultando el enlace, porque quien
+  // tenga la URL guardada del proyecto anterior la va a usar.
+  if (project.etapa === "VENTA") {
+    redirect(`/gestor/${code}`);
+  }
+
   if (!staffPhaseAllowed(staff.tier, phase)) {
     redirect(`/p/${code}/${firstAllowedPhaseForStaff(staff.tier)}`);
   }

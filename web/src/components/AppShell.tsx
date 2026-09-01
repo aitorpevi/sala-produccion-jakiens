@@ -98,6 +98,31 @@ export function AppShell({
   );
 }
 
+/**
+ * Cabecera de las pantallas que no cuelgan de un proyecto concreto (gestor,
+ * alta de oportunidad, ficha). `AppShell` no sirve aquí porque incluye la barra
+ * de las siete fases, que solo tiene sentido dentro de la sala de producción.
+ */
+export function TopBar({
+  staff,
+  href = "/gestor",
+}: {
+  staff: { name: string; tier: StaffTier };
+  href?: string;
+}) {
+  return (
+    <header className="top">
+      <Link href={href} className="brand">
+        <span className="wordmark">Jakiens</span>
+        <span className="sub">Gestor de proyectos</span>
+      </Link>
+      <div className="viewer">
+        <StaffViewerLabel staff={staff} />
+      </div>
+    </header>
+  );
+}
+
 export function ModHead({
   step,
   title,

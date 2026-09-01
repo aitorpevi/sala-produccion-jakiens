@@ -68,6 +68,26 @@ export function diasEntre(desde: Date, hasta: Date) {
   return Math.round((b - a) / 86_400_000);
 }
 
+/**
+ * Lee el "YYYY-MM-DD" de un `<input type="date">`.
+ *
+ * Se construye en UTC a propósito: `new Date("2026-07-24")` ya es UTC, pero
+ * `new Date(2026, 6, 24)` sería medianoche local y en España se guardaría como
+ * el día 23 a las 22:00. Los hitos son días de calendario, no instantes.
+ */
+export function fechaDesdeInput(valor: string | null | undefined): Date | null {
+  if (!valor) return null;
+  const m = valor.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const fecha = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
+
+/** El inverso: de `Date` al valor que espera un `<input type="date">`. */
+export function fechaParaInput(fecha: Date | null | undefined) {
+  return fecha ? fecha.toISOString().slice(0, 10) : "";
+}
+
 /** "24 JUL" o "24–25 JUL", en el mismo estilo seco que ya usa la app. */
 export function etiquetaFecha(fecha: Date, fechaFin?: Date | null) {
   const mes = (d: Date) => MESES[d.getUTCMonth()];

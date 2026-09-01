@@ -9,6 +9,60 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-01 · MacBook · Paso 2: la etapa de venta (rama `gestor-proyectos`)
+
+Primeras pantallas del gestor. Un proyecto ya puede existir antes de ganarse.
+
+**Rutas nuevas**, todas bajo `/gestor` y no bajo `/p`, para no mezclar los dos
+ejes: `/p` es la sala de producción y sus siete fases; `/gestor` es el eje de
+negocio y sus cinco etapas.
+
+- `/gestor` — todos los proyectos agrupados por etapa, con el próximo hito de
+  cada uno. Lo ve **todo** el equipo interno, incluidos `POSTPRODUCTION`, que
+  hasta ahora no veían nada de venta pese a preparar las presentaciones.
+- `/gestor/nueva` — alta de oportunidad. Pide solo lo que se sabe el día que
+  entra el brief: cliente, nombre, código, agencia, realizador propuesto,
+  formato, fecha de entrega de la propuesta y qué piden. Solo `FULL`.
+- `/gestor/[code]` — ficha: cabecera, recorrido de las cinco etapas, lista de
+  fechas con alta y baja, y el bloque de situación.
+
+**La sala de producción queda cerrada mientras el proyecto está en venta.** Se
+comprueba en `requireStaffAccess`, no ocultando el enlace: quien tenga la URL
+guardada la va a usar. `/p` tampoco lista oportunidades.
+
+**El GO** (`marcarGanadoAction`) es el punto donde el gestor entrega el testigo:
+pasa el proyecto a PREPRODUCCION/ACTIVO, crea las siete `PhaseState` con
+`skipDuplicates` y redirige a la fase Equipo. `/p/nuevo` sigue existiendo para
+los proyectos que entran ya ganados sin pasar por venta.
+
+**Primer uso real de la tabla `Hito`**: la fecha de entrega de la propuesta se
+guarda como hito de tipo `ENTREGA_PROPUESTA` y criticidad ALTA. Es el primer
+`<input type="date">` de la app; el resto de fechas siguen siendo texto libre.
+Los hitos derivados (`origen != "manual"`) no se pueden borrar desde la ficha y
+se marcan como "Automático", con el motivo en el `title` — esconder el botón
+habría dejado a la gente preguntándose si es un fallo.
+
+**Color**: el relleno es de la ETAPA (`src/lib/etapas.ts`), y la urgencia va por
+peso y borde, no por color. Dos escalas de color en la misma tarjeta y no se lee
+ninguna de las dos.
+
+**Verificado en el navegador**, no solo compilado: alta de oportunidad completa
+(EG-2611, Estrella Galicia) con su hito · `/p/EG-2611/equipo` redirige a la ficha
+· `/p` no la lista · el GO crea las siete fases y entra en Equipo · con la cuenta
+de Carmen (`LOGISTICS`) se ve el gestor pero no el botón de nueva oportunidad, y
+`/gestor/nueva` a pelo redirige. `tsc --noEmit` limpio y `npm run build`
+completo; los 6 avisos de lint que quedan están todos en archivos no tocados.
+
+**En la base local** queda EG-2611 como oportunidad de ejemplo, para poder
+clicar el flujo. No está en el seed.
+
+**Decisión que conviene revisar**: hoy cualquier nivel puede añadir y quitar
+fechas de cualquier proyecto. Es lo coherente con "cada responsable de fase
+nutre su parte", pero hasta que exista la asignación de personas por etapa
+(paso 3) no hay forma de acotarlo mejor.
+
+---
+
 ## 2026-09-01 · MacBook · Paso 1: hitos, etapa y estado (rama `gestor-proyectos`)
 
 Primer paso de implementación del gestor. Solo modelo de datos y vocabulario: no

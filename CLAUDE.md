@@ -18,7 +18,7 @@ Una sola app Next.js con tres módulos que comparten base de datos y sesión:
 | Módulo | Rutas | Qué hace |
 |---|---|---|
 | **Radar** | `/radar` | Research y tendencias. Ingesta de Wikipedia, GDELT, Bluesky, HN, RSS, Telegram, YouTube y Reddit. Independiente del resto. |
-| **Gestor de proyectos** | *(por construir)* | Visión transversal: todos los proyectos por etapa, calendario de hitos, quién trabaja en qué. Arranca en **venta**, antes del GO. |
+| **Gestor de proyectos** | `/gestor` | Visión transversal: todos los proyectos por etapa, sus fechas y quién trabaja en qué. Arranca en **venta**, antes del GO. |
 | **Herramienta de producción** | `/p/[code]/...` | Operativa de un proyecto concreto. Se desbloquea con el GO. |
 
 El gestor **no es una app aparte**: son rutas nuevas sobre las mismas tablas. La
@@ -68,6 +68,14 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   cifrados. No hace falta acordarse.
 - **Los permisos se comprueban en el servidor**, no ocultando enlaces. Todo pasa
   por `src/lib/access.ts`. Entrar a una URL sin permiso redirige.
+- **La sala de producción se abre con el GO.** Mientras `etapa` es VENTA,
+  `requireStaffAccess` redirige de `/p/[code]/*` a `/gestor/[code]`, y `/p` no
+  lista oportunidades. El GO (`marcarGanadoAction`) es el único sitio que pasa un
+  proyecto de venta a preproducción y crea sus siete `PhaseState`.
+- **El gestor lo ve todo el equipo interno**, sea cual sea su nivel: el objetivo
+  de la herramienta es que cualquiera sepa qué hay encima de la mesa. Los niveles
+  filtran lo que se puede hacer DENTRO de un proyecto, no si el proyecto existe.
+  Crear oportunidades y mover etapa/estado es solo `FULL`.
 
 ## Niveles de acceso del equipo interno
 

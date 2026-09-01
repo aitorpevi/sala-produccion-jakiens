@@ -11,7 +11,13 @@ export default async function ProyectosPage() {
   const staff = await requireStaff();
   const landingPhase = firstAllowedPhaseForStaff(staff.tier);
 
-  const projects = await db.project.findMany({ orderBy: { createdAt: "desc" } });
+  // Las oportunidades en venta no salen aquí: esta pantalla es la puerta de la
+  // sala de producción, y un proyecto que aún no se ha ganado no tiene nada que
+  // operar. Se ven en el gestor.
+  const projects = await db.project.findMany({
+    where: { etapa: { not: "VENTA" } },
+    orderBy: { createdAt: "desc" },
+  });
   const activos = projects.filter((p) => estaVivo(p.estado));
   const cerrados = projects.filter((p) => estaArchivado(p.estado));
 
@@ -49,6 +55,9 @@ export default async function ProyectosPage() {
             <h2>Proyectos activos</h2>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            <Link href="/gestor" className="btn ghost">
+              Gestor
+            </Link>
             <Link
               href="/radar"
               className="btn solid"
