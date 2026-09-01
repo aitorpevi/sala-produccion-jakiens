@@ -1,0 +1,122 @@
+# Sala de Producción · Jakiens — contexto del proyecto
+
+Este archivo lo lee Claude Code automáticamente al abrir el repo, **en cualquier
+ordenador**. Es el canal por el que las sesiones del fijo y del MacBook comparten
+lo que saben. Si tomas una decisión de diseño que la otra sesión necesitaría
+conocer, escríbela aquí. Lo que pasó en una sesión concreta va en `BITACORA.md`.
+
+Alcance funcional y roadmap: [REQUISITOS.md](REQUISITOS.md).
+Tratamiento de datos personales: [PROTECCION-DATOS.md](PROTECCION-DATOS.md).
+
+> `REQUISITOS.md` va por delante del código en algunos puntos: describe cosas
+> planificadas como si estuvieran hechas. Contrasta siempre con el código.
+
+## Los tres módulos
+
+Una sola app Next.js con tres módulos que comparten base de datos y sesión:
+
+| Módulo | Rutas | Qué hace |
+|---|---|---|
+| **Radar** | `/radar` | Research y tendencias. Ingesta de Wikipedia, GDELT, Bluesky, HN, RSS, Telegram, YouTube y Reddit. Independiente del resto. |
+| **Gestor de proyectos** | *(por construir)* | Visión transversal: todos los proyectos por etapa, calendario de hitos, quién trabaja en qué. Arranca en **venta**, antes del GO. |
+| **Herramienta de producción** | `/p/[code]/...` | Operativa de un proyecto concreto. Se desbloquea con el GO. |
+
+El gestor **no es una app aparte**: son rutas nuevas sobre las mismas tablas. La
+ficha de proyecto del gestor y la sala de producción son la misma fila de
+`Project`. No hay sincronización entre módulos porque no hay nada que sincronizar.
+
+## Dos ejes de fase — no confundirlos
+
+Es la distinción de diseño más importante del proyecto.
+
+- **Etapa de negocio** (5): `venta · preproducción · rodaje · postproducción · cierre`.
+  Dónde está el proyecto en la vida de la compañía. Es lo que muestra el gestor.
+- **Fase operativa** (7): `equipo · prepro · materiales · altas · rodaje · postpro · cierre`.
+  El desglose del trabajo del producer desde el GO. Vive en `PhaseState` y en
+  `src/lib/phases.ts`, y ya funciona.
+
+La fase operativa es un desglose de las etapas post-GO, no una lista paralela.
+El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
+
+## Decisiones vigentes
+
+- **Fechas.** Casi todas las fechas del modelo son `String?` (texto libre): se
+  eligió a propósito para no pelearse con formatos al escribirlas. La excepción
+  es `CallSheetDay.fechaISO`, que se añadió cuando la vista de cliente necesitó
+  saber si hoy era día de rodaje. Un calendario maestro no se puede construir
+  sobre texto libre, así que el gestor introduce una tabla `Hito` con `DateTime`
+  real como única fuente de verdad del calendario; los campos de texto se quedan
+  como etiqueta legible.
+- **Presupuesto de venta ≠ presupuesto de coste.** Lo que hoy la app llama
+  "presupuesto" es coste (`ProjectMember.rate × dias` + `presupuestoGasto`). Lo
+  que se cobra al cliente no está modelado. Son dos cosas con permisos
+  distintos: Carmen ve coste pero **no** ve venta, así que la venta necesita su
+  propia lista de acceso y no basta con estirar `StaffTier`.
+- **Cifrado en la aplicación, no solo en la base.** `src/lib/db.ts` cifra y
+  descifra de forma transparente vía extensión de Prisma. Escribas la consulta
+  que escribas, los campos de `CAMPOS_CIFRADOS` salen descifrados y entran
+  cifrados. No hace falta acordarse.
+- **Los permisos se comprueban en el servidor**, no ocultando enlaces. Todo pasa
+  por `src/lib/access.ts`. Entrar a una URL sin permiso redirige.
+
+## Niveles de acceso del equipo interno
+
+`StaffTier` en `src/lib/phases.ts`:
+
+- **FULL** — Javier, Aina, Chiara, Mikko, Aitor, Maca. Todo, incluidas cifras.
+- **LOGISTICS** — Pablo, Carmen. Equipo, prepro, materiales, rodaje y postpro.
+- **POSTPRODUCTION** — Malo, Miquel, Lungo. Prepro, materiales y postpro.
+
+Fuera del equipo interno hay dos accesos más, ambos sin cuenta: colaborador
+externo por enlace mágico (`/f/[token]`, `AccessToken`) y cliente/agencia en
+modo consulta (`/c/[token]`, `ClientAccess`).
+
+## Arrancar en local
+
+Node vive en `~/.local/node` (instalado sin tocar el sistema, ya en el `PATH`
+vía `~/.zshrc`). Desde `web/`:
+
+```bash
+npm install
+npx prisma dev --name local   # Postgres local, sin Docker
+npx prisma migrate deploy
+npx prisma db seed            # equipo real + proyecto de ejemplo CHB-2607
+npm run dev
+```
+
+Login local: `nombre@jakiens.com` / `jakiens-<nombre>-26`.
+
+**Trabaja siempre contra el Postgres local.** La base de producción tiene datos
+reales de proyectos y datos personales del equipo; no es sitio para probar
+migraciones de esquema.
+
+## Variables de entorno
+
+`.env` no se versiona. El código usa ocho variables — el `README` solo documenta
+tres, ojo:
+
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | Postgres. Local en desarrollo; Prisma Postgres en Vercel. |
+| `SESSION_SECRET` | Firma del JWT de sesión. Distinto en cada entorno. |
+| `DATOS_PERSONALES_KEY` | **Crítica.** Clave AES-256 de los datos personales cifrados. |
+| `APP_BASE_URL` | Enlaces de ficha en los mensajes de WhatsApp. |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob, para los archivos subidos. |
+| `CRON_SECRET` | Protege el endpoint de ingesta del Radar. |
+| `YOUTUBE_API_KEY` | Fuente de YouTube del Radar. |
+| `SLACK_WEBHOOK_URL` | Webhook por defecto (cada proyecto puede tener el suyo). |
+
+> **`DATOS_PERSONALES_KEY` no tiene copia de seguridad automática.** Si se pierde
+> o se rota, los DNI, NAF, IBAN, domicilios y restricciones alimentarias que hay
+> cifrados en producción quedan ilegibles para siempre. Debe estar guardada
+> fuera de Vercel, en un gestor de contraseñas.
+
+## Trabajar desde dos ordenadores
+
+GitHub es la única copia buena. `git pull` antes de empezar, `git push` al
+terminar, y nunca los dos ordenadores a la vez sin haber subido lo anterior.
+
+**Cada push a `main` despliega a producción en Vercel.** Para cambios que puedan
+romper algo, rama aparte y fusionar cuando esté verificado.
+
+Antes de hacer push, añade tu entrada a `BITACORA.md`.
