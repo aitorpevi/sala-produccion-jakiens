@@ -61,9 +61,13 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   vive repartido en `ProjectMember.rate`, `dias` y `presupuestoGasto`, y lo ven
   los niveles `FULL` y `LOGISTICS` —Pablo y Carmen negocian tarifas—. La
   **venta** (lo que cobramos) vive en `PresupuestoVenta`, tabla aparte, y la ve
-  solo quien tenga `StaffUser.accesoPresupuestoVenta`: hoy Javier, Aitor, Aina,
-  Chiara y Maca. Carmen ve coste pero **no** ve venta, y por eso el permiso va
-  por usuario y no por `tier`.
+  solo quien tenga `StaffUser.accesoPresupuestoVenta`: Javier, Aitor, Aina,
+  Chiara y Maca. Pablo y Carmen ven coste pero **no** ven venta, y por eso el
+  permiso va por usuario y no por `tier`. **Mikko tampoco lo ve**, aunque sea
+  `FULL`: es dirección creativa y no interviene en la cotización. Confirmado, no
+  es un olvido.
+  Nota de vocabulario: **"Jakie" es Javier** —el dueño— cuando aparezca en
+  conversaciones o documentos. Pablo y Carmen tienen exactamente el mismo rol.
   El dato confidencial **ni se consulta** si quien mira no tiene permiso: traerlo
   y no pintarlo lo dejaría en el HTML del servidor.
 - **Equipo interno ≠ colaboradores.** `AsignacionEtapa` reparte trabajo entre el

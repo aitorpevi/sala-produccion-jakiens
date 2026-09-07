@@ -164,10 +164,11 @@ const MATERIALS = [
 
 /**
  * `venta` es el acceso al presupuesto de VENTA (lo que se cotiza al cliente), y
- * no se deduce del nivel: Carmen es LOGISTICS y sí ve costes para negociar
- * tarifas, pero no lo que cobramos. Mikko queda fuera por ahora —es dirección
- * creativa y no interviene en la cotización— pero es una línea de cambiar si
- * hace falta.
+ * no se deduce del nivel: Pablo y Carmen son LOGISTICS y sí ven costes para
+ * negociar tarifas, pero no lo que cobramos.
+ *
+ * Mikko queda fuera: es dirección creativa y no interviene en la cotización
+ * (confirmado por Aitor el 2026-09-07, no es un olvido).
  */
 const STAFF: {
   name: string;
