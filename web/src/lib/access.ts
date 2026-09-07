@@ -21,6 +21,10 @@ export async function requireStaffAccess(code: string, phase: PhaseKey) {
   const project = await db.project.findUnique({ where: { code } });
   if (!project) notFound();
 
+  // Un externo no debe ni enterarse de que existe un proyecto que no lleva, así
+  // que 404 y no "no autorizado": lo segundo confirma que está ahí.
+  if (!(await puedeVerProyecto(staff, project.id))) notFound();
+
   // Un proyecto en venta todavía no es una producción: no hay equipo que
   // convocar, ni material que pedir, ni jornadas que planificar. La sala de
   // producción se abre con el GO, y hasta entonces el proyecto se trabaja en su
@@ -37,9 +41,38 @@ export async function requireStaffAccess(code: string, phase: PhaseKey) {
   return { project, staff };
 }
 
+/**
+ * Filtro de proyectos visibles para alguien.
+ *
+ * El equipo de casa ve todos: el objetivo de la herramienta es que cualquiera
+ * sepa qué hay encima de la mesa. Un producer externo ve solo aquellos en los
+ * que está asignado — tiene cuenta para poder trabajar, no para conocer la
+ * cartera de la compañía.
+ *
+ * Devuelve un fragmento de `where` para componer en la consulta, en vez de
+ * filtrar en memoria: si el filtro se aplicase después de traer las filas, los
+ * proyectos ajenos habrían pasado igualmente por el servidor.
+ */
+export function filtroProyectosVisibles(staff: { id: string; tier: StaffTier }) {
+  if (staff.tier !== "EXTERNO") return {};
+  return { asignaciones: { some: { staffUserId: staff.id } } };
+}
+
+/** Si esa persona puede abrir ese proyecto concreto. */
+export async function puedeVerProyecto(
+  staff: { id: string; tier: StaffTier },
+  projectId: string,
+) {
+  if (staff.tier !== "EXTERNO") return true;
+  const n = await db.asignacionEtapa.count({
+    where: { projectId, staffUserId: staff.id },
+  });
+  return n > 0;
+}
+
 export async function requireStaffTier(allowedTiers: StaffTier[]) {
   const staff = await requireStaff();
-  if (!allowedTiers.includes(staff.tier)) redirect("/p");
+  if (!allowedTiers.includes(staff.tier)) redirect("/gestor");
   return staff;
 }
 

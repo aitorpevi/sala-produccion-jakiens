@@ -9,6 +9,67 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-07 · MacBook · Ficha de venta, clientes, avisos y externos
+
+Resto del feedback de las pantallas del gestor.
+
+**Ficha de proyecto:**
+
+- **Etapa y estado suben al encabezado y se fusionan.** Antes eran dos selectores
+  al final de la página que se pisaban: un proyecto en preproducción ES un
+  proyecto ganado, y decirlo dos veces solo permitía que un día no coincidieran.
+  Ahora hay dos salidas: avanzar de etapa —y salir de VENTA hacia adelante
+  dispara el GO entero, siete fases y canal de Slack— o marcarlo como perdido.
+  Fuera PAUSADO y OPORTUNIDAD de la interfaz: si está en Venta ya es una
+  oportunidad.
+- **En venta no se añaden fechas.** Solo vive la entrega de la propuesta, que se
+  pone al abrir la oportunidad; el calendario se define en preproducción. En su
+  sitio hay una nota que lo explica, en vez de un formulario ausente sin más.
+- **Panel de briefing** con los documentos y enlaces, y alta de nuevos.
+- **Panel de presupuesto sin importe**: subir el PDF, estado, quién lo prepara y
+  los comentarios. Al subir el PDF **se captura la referencia del PPTO de su
+  nombre de archivo** y pasa a ser el identificador visible del proyecto. Queda
+  editable, por si el archivo venía mal nombrado.
+- El identificador del encabezado es `refPresupuesto` si existe, y el código
+  interno si no.
+
+**Clientes** (`/gestor/clientes`, niveles FULL y LOGISTICS): ficha por cliente
+con CIF, dirección fiscal, contacto y condiciones de pago, su histórico de
+proyectos y cuántos se ganaron. Reservado a quien ve dinero: aquí vive
+información de contabilidad, no de reparto de trabajo.
+
+**Avisos** en la cabecera, con `<details>` y no un menú con estado: funciona sin
+hidratar y no se queda nada abierto al navegar.
+
+**Nivel EXTERNO acotado.** Se aplica en la consulta (`filtroProyectosVisibles`)
+y no filtrando en memoria: filtrar después significaría que los proyectos ajenos
+ya han pasado por el servidor. A un proyecto que no lleva responde **404 y no
+403** — un 403 confirma que existe.
+
+**Descarga de documentos** por `/api/documentos/[id]`, con el permiso comprobado
+en el propio endpoint. Una URL de descarga es lo primero que alguien pega en un
+chat.
+
+**Verificado en el navegador, con cuatro cuentas distintas:**
+
+- **Aitor** abre la oportunidad "Verano" (McCann · Cerveza Turia) y todo aterriza.
+- **Chiara** ve el aviso en la cabecera con su enlace correcto, sube el PPTO y la
+  referencia se captura: `PPTO 57A-2026-Kids-Consum-Mascotas`.
+- **Carmen** ve la ficha, el briefing y el identificador, pero **no** el panel de
+  presupuesto ni los enlaces de descarga; y pidiendo la URL de descarga a pelo
+  recibe un 403.
+- **Toni** (EXTERNO, asignado solo a IKE-2609) ve un único proyecto en el
+  tablero, entra en el suyo, recibe 404 en fichas y salas de producción ajenas, y
+  `/gestor/clientes` lo devuelve al tablero.
+
+`tsc` limpio, `build` completo, lint en los 6 avisos preexistentes.
+
+**Sigue pendiente**: desplegar. Hay 8 migraciones en esta rama y el build de
+Vercel **no ejecuta migraciones** — fusionar a `main` sin migrar antes rompería
+producción. Y los hitos siguen sin estado de "completado".
+
+---
+
 ## 2026-09-07 · MacBook · Una sola pantalla, y el alta de oportunidad rehecha
 
 **Las dos pantallas se fusionan.** Propuesta de Aitor, y tenía razón: `/p` y

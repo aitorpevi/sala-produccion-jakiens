@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { StaffTier } from "@/generated/prisma/enums";
 import { PHASES, PHASE_STATE, STAFF_TIER_LABEL, type PhaseKey } from "@/lib/phases";
-import { logoutAction } from "@/app/actions";
+import { logoutAction, marcarAvisosLeidosAction } from "@/app/actions";
+import { avisosPendientes } from "@/lib/avisos";
 
 type Project = {
   client: string;
@@ -41,7 +42,7 @@ export function AppShell({
   return (
     <div className="shell">
       <header className="top">
-        <Link href="/p" className="brand">
+        <Link href="/gestor" className="brand">
           <span className="wordmark">Jakiens</span>
           <span className="sub">Sala de producción</span>
         </Link>
@@ -103,13 +104,15 @@ export function AppShell({
  * alta de oportunidad, ficha). `AppShell` no sirve aquí porque incluye la barra
  * de las siete fases, que solo tiene sentido dentro de la sala de producción.
  */
-export function TopBar({
+export async function TopBar({
   staff,
   href = "/gestor",
 }: {
-  staff: { name: string; tier: StaffTier };
+  staff: { id: string; name: string; tier: StaffTier };
   href?: string;
 }) {
+  const avisos = await avisosPendientes(staff.id);
+
   return (
     <header className="top">
       <Link href={href} className="brand">
@@ -117,6 +120,27 @@ export function TopBar({
         <span className="sub">Gestor de proyectos</span>
       </Link>
       <div className="viewer">
+        {avisos.length > 0 ? (
+          // `<details>` y no un menú de JavaScript: son cuatro líneas de HTML,
+          // funcionan sin hidratar y no hay estado que se quede pegado.
+          <details className="avisos">
+            <summary className="btn ghost">
+              Avisos <span className="avisos-punto">{avisos.length}</span>
+            </summary>
+            <div className="avisos-lista">
+              {avisos.map((a) => (
+                <Link key={a.id} href={a.url ?? "/gestor"} className="aviso">
+                  {a.texto}
+                </Link>
+              ))}
+              <form action={marcarAvisosLeidosAction}>
+                <button className="btn ghost" type="submit">
+                  Marcar como leídos
+                </button>
+              </form>
+            </div>
+          </details>
+        ) : null}
         <StaffViewerLabel staff={staff} />
       </div>
     </header>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { requireStaff } from "@/lib/access";
+import { requireStaff, filtroProyectosVisibles } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
 import { ETAPAS, ESTADOS, estaVivo, estaArchivado } from "@/lib/etapas";
 import { etiquetaFecha, urgencia } from "@/lib/hitos";
@@ -61,6 +61,10 @@ export default async function GestorPage({
   const filtroActivo = CLAVES_PRODUCTORA.includes(filtro as never) ? filtro : null;
 
   const proyectos = await db.project.findMany({
+    // Un producer externo solo ve los proyectos que lleva. Se filtra en la
+    // consulta y no después: filtrar en memoria significaría que los ajenos ya
+    // han pasado por el servidor.
+    where: filtroProyectosVisibles(staff),
     orderBy: { createdAt: "desc" },
     include: {
       // Todos los hitos, y el que se enseña se elige abajo. Filtrar aquí por
@@ -96,9 +100,14 @@ export default async function GestorPage({
               Radar
             </Link>
             {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
-              <Link href="/colaboradores" className="btn ghost">
-                Colaboradores
-              </Link>
+              <>
+                <Link href="/gestor/clientes" className="btn ghost">
+                  Clientes
+                </Link>
+                <Link href="/colaboradores" className="btn ghost">
+                  Colaboradores
+                </Link>
+              </>
             ) : null}
             {staff.tier === "FULL" ? (
               <>

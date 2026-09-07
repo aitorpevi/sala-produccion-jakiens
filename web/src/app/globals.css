@@ -406,3 +406,33 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .filtro:hover{border-color:var(--ink);color:var(--ink)}
 .filtro.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .filtro.on .etapa-punto{background:var(--paper)}
+
+/* ---------- Ficha: situación junto al título ---------- */
+/* Etapa y estado suben al encabezado. Estaban al final de la página y eran dos
+   controles que se pisaban: si está en preproducción, está ganado. */
+.proj-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.proj-titulo{min-width:0;flex:1}
+.proj-situacion{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:6px}
+.proj-situacion form{display:flex;align-items:center;gap:8px}
+.estado-chip{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--etapa,var(--hair-strong));color:var(--etapa,var(--smoke));padding:7px 11px}
+.nota-panel{
+  padding:16px;font-size:13px;color:var(--smoke);border-top:1px solid var(--hair);background:var(--bone)}
+
+/* Avisos en la cabecera. `<details>` en vez de un menú con estado: funciona sin
+   JavaScript y no hay nada que se quede abierto al navegar. */
+.avisos{position:relative}
+.avisos > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.avisos > summary::-webkit-details-marker{display:none}
+.avisos-punto{
+  font-family:var(--mono);font-size:9px;font-weight:700;background:var(--ink);color:var(--paper);
+  min-width:16px;height:16px;display:inline-grid;place-items:center;padding:0 4px}
+.avisos[open] > summary{background:var(--ink);color:var(--paper)}
+.avisos[open] > summary .avisos-punto{background:var(--paper);color:var(--ink)}
+.avisos-lista{
+  position:absolute;right:0;top:calc(100% + 8px);width:min(340px,80vw);z-index:50;
+  background:var(--paper);border:1px solid var(--ink);box-shadow:var(--shadow);padding:6px}
+.aviso{display:block;padding:10px 11px;font-size:13px;line-height:1.35;border-bottom:1px solid var(--hair)}
+.aviso:hover{background:var(--bone)}
+.avisos-lista form{padding:8px 4px 4px;display:flex;justify-content:flex-end}

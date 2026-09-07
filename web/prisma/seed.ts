@@ -173,7 +173,7 @@ const MATERIALS = [
 const STAFF: {
   name: string;
   email: string;
-  tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION";
+  tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION" | "EXTERNO";
   venta?: boolean;
 }[] = [
   { name: "Javier", email: "javier@jakiens.com", tier: "FULL", venta: true },
@@ -187,6 +187,11 @@ const STAFF: {
   { name: "Malo", email: "malo@jakiens.com", tier: "POSTPRODUCTION" },
   { name: "Miquel", email: "miquel@jakiens.com", tier: "POSTPRODUCTION" },
   { name: "Lungo", email: "lungo@jakiens.com", tier: "POSTPRODUCTION" },
+  // Producers externos. Tienen cuenta para poder trabajar, pero solo ven los
+  // proyectos en los que están asignados: no la cartera de la compañía.
+  { name: "Toni", email: "toni@jakiens.com", tier: "EXTERNO" },
+  { name: "Andrea", email: "andrea@jakiens.com", tier: "EXTERNO" },
+  { name: "Guillem", email: "guillem@jakiens.com", tier: "EXTERNO" },
 ];
 
 function tempPasswordFor(name: string) {

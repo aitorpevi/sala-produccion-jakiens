@@ -6,10 +6,12 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
 import { CLAVES_ETAPA } from "@/lib/etapas";
 import { fechaDesdeInput } from "@/lib/hitos";
-import type { Etapa, EstadoProyecto, TipoHito } from "@/generated/prisma/enums";
+import type { Etapa, TipoHito } from "@/generated/prisma/enums";
 import { TIPOS_HITO } from "@/lib/hitos";
 import { ESTADOS_PRESUPUESTO_VENTA } from "@/lib/presupuesto-venta";
 import { haySlackApi, prepararCanalDeProyecto } from "@/lib/slack";
+import { guardarArchivo } from "@/lib/storage";
+import { avisar } from "@/lib/avisos";
 
 /**
  * Abre el canal de Slack del proyecto y mete al equipo de casa.
@@ -74,6 +76,14 @@ export async function marcarGanadoAction(formData: FormData) {
     data: { etapa: "PREPRODUCCION", estado: "ACTIVO" },
   });
 
+  await abrirProduccion(project);
+  await abrirCanalDeSlack(project);
+
+  redirect(`/p/${project.code}/equipo`);
+}
+
+/** Crea las siete fases operativas del producer. */
+async function abrirProduccion(project: { id: string }) {
   // `skipDuplicates` porque un proyecto puede llegar aquí ya con fases creadas:
   // si alguien lo devolvió a venta por error y vuelve a darle el GO, no debe
   // reventar ni duplicar nada.
@@ -89,22 +99,70 @@ export async function marcarGanadoAction(formData: FormData) {
     ],
     skipDuplicates: true,
   });
-
-  await abrirCanalDeSlack(project);
-
-  redirect(`/p/${project.code}/equipo`);
 }
 
-/** Cambia etapa o estado sin tocar nada más. */
-export async function actualizarSituacionAction(formData: FormData) {
+/**
+ * Mueve el proyecto de etapa, y con eso queda dicho todo.
+ *
+ * Antes había dos controles, etapa y estado, y se pisaban: un proyecto en
+ * preproducción es un proyecto ganado, decirlo dos veces solo permitía que un
+ * día no coincidieran. Ahora salir de VENTA hacia adelante ES ganarlo —y
+ * dispara el GO entero: siete fases y canal de Slack—, y la única alternativa
+ * es marcarlo como perdido.
+ */
+export async function moverEtapaAction(formData: FormData) {
   await requireFull();
   const code = String(formData.get("code") ?? "");
   const etapa = String(formData.get("etapa") ?? "") as Etapa;
-  const estado = String(formData.get("estado") ?? "") as EstadoProyecto;
-
   if (!CLAVES_ETAPA.includes(etapa)) return;
 
-  await db.project.update({ where: { code }, data: { etapa, estado } });
+  const project = await db.project.findUnique({ where: { code } });
+  if (!project) return;
+
+  const gana = project.etapa === "VENTA" && etapa !== "VENTA";
+
+  await db.project.update({
+    where: { id: project.id },
+    data: { etapa, estado: "ACTIVO" },
+  });
+
+  if (gana) {
+    await abrirProduccion(project);
+    await abrirCanalDeSlack(project);
+    redirect(`/p/${project.code}/equipo`);
+  }
+
+  if (etapa === "CIERRE") {
+    // Llegar a cierre no es haber cerrado: el cierre económico es trabajo, y
+    // marcarlo como terminado al entrar lo sacaría del tablero justo cuando
+    // hay que hacerlo. Se cierra a mano desde la propia etapa.
+    await db.project.update({ where: { id: project.id }, data: { estado: "ACTIVO" } });
+  }
+
+  revalidatePath(`/gestor/${code}`);
+}
+
+/** Se perdió. Se archiva y se puede consultar: no se borra nada. */
+export async function marcarPerdidoAction(formData: FormData) {
+  await requireFull();
+  const code = String(formData.get("code") ?? "");
+  await db.project.update({ where: { code }, data: { estado: "PERDIDO" } });
+  revalidatePath(`/gestor/${code}`);
+}
+
+/** Entregado y cerrado económicamente. */
+export async function marcarCerradoAction(formData: FormData) {
+  await requireFull();
+  const code = String(formData.get("code") ?? "");
+  await db.project.update({ where: { code }, data: { estado: "CERRADO", etapa: "CIERRE" } });
+  revalidatePath(`/gestor/${code}`);
+}
+
+/** Vuelve a ponerlo en marcha tras haberlo dado por perdido o cerrado. */
+export async function reabrirAction(formData: FormData) {
+  await requireFull();
+  const code = String(formData.get("code") ?? "");
+  await db.project.update({ where: { code }, data: { estado: "ACTIVO" } });
   revalidatePath(`/gestor/${code}`);
 }
 
@@ -204,25 +262,73 @@ export async function guardarPresupuestoVentaAction(formData: FormData) {
   const project = await db.project.findUnique({ where: { code } });
   if (!project) return;
 
-  const estado = String(formData.get("estado") ?? "borrador");
+  const estado = String(formData.get("estado") ?? "en_preparacion");
   const notas = String(formData.get("notas") ?? "").trim();
+  const asignadoAId = String(formData.get("asignadoA") ?? "").trim();
+  const refManual = String(formData.get("refPresupuesto") ?? "").trim();
+  const archivo = formData.get("archivo");
 
   if (!(estado in ESTADOS_PRESUPUESTO_VENTA)) return;
 
-  const datos = {
-    estado,
-    notas: notas || null,
-    actualizadoPorId: staff.id,
-    // La fecha de envío se sella sola al pasar a "enviado a cliente": es un
-    // dato que luego se consulta ("¿cuándo mandamos esto?") y nadie lo apunta.
-    enviadoEn: estado === "enviado_cliente" ? new Date() : undefined,
-  };
+  let refCapturada: string | null = null;
+
+  if (archivo instanceof File && archivo.size > 0) {
+    const guardado = await guardarArchivo(archivo);
+    await db.documento.create({
+      data: {
+        projectId: project.id,
+        tipo: "PRESUPUESTO",
+        nombre: guardado.fileName,
+        fileUrl: guardado.fileUrl,
+        fileData: guardado.fileData,
+        subidoPorId: staff.id,
+      },
+    });
+    // El identificador de verdad del proyecto es el nombre del PPTO, y este es
+    // el momento en que por fin existe. Se saca del nombre del archivo —"PPTO
+    // 57A-2026-Kids-Consum-Mascotas.pdf"— sin la extensión, y queda editable
+    // por si el archivo venía mal nombrado.
+    refCapturada = archivo.name.replace(/\.[^.]+$/, "").trim() || null;
+  }
+
+  const ref = refManual || refCapturada;
+  if (ref && ref !== project.refPresupuesto) {
+    await db.project.update({ where: { id: project.id }, data: { refPresupuesto: ref } });
+  }
+
+  const previo = await db.presupuestoVenta.findUnique({ where: { projectId: project.id } });
 
   await db.presupuestoVenta.upsert({
     where: { projectId: project.id },
-    create: { projectId: project.id, ...datos, enviadoEn: datos.enviadoEn ?? null },
-    update: datos,
+    create: {
+      projectId: project.id,
+      estado,
+      notas: notas || null,
+      asignadoAId: asignadoAId || null,
+      actualizadoPorId: staff.id,
+      enviadoEn: estado === "enviado_cliente" ? new Date() : null,
+    },
+    update: {
+      estado,
+      notas: notas || null,
+      asignadoAId: asignadoAId || null,
+      actualizadoPorId: staff.id,
+      // La fecha de envío se sella sola al pasar a "enviado a cliente": es un
+      // dato que luego se consulta y que nadie apunta a mano.
+      enviadoEn: estado === "enviado_cliente" ? new Date() : undefined,
+    },
   });
+
+  // Solo se avisa cuando el encargo cambia de manos. Reasignar a la misma
+  // persona cada vez que se guarda una nota la acabaría entrenando a ignorar
+  // los avisos, que es como se rompe un sistema de notificaciones.
+  if (asignadoAId && asignadoAId !== previo?.asignadoAId) {
+    await avisar({
+      staffUserId: asignadoAId,
+      texto: `${staff.name} te ha asignado el presupuesto de «${project.name}» (${project.client}).`,
+      url: `/gestor/${project.code}`,
+    });
+  }
 
   revalidatePath(`/gestor/${code}`);
 }
@@ -238,5 +344,50 @@ export async function borrarHitoAction(formData: FormData) {
   if (!hito || hito.origen !== "manual") return;
 
   await db.hito.delete({ where: { id } });
+  revalidatePath(`/gestor/${code}`);
+}
+
+/** Quita un documento del proyecto. */
+export async function borrarDocumentoAction(formData: FormData) {
+  const staff = await requireStaff();
+  const code = String(formData.get("code") ?? "");
+  const id = String(formData.get("id") ?? "");
+
+  const doc = await db.documento.findUnique({ where: { id } });
+  if (!doc) return;
+  if (doc.tipo === "PRESUPUESTO" && !staff.accesoPresupuestoVenta) return;
+
+  await db.documento.delete({ where: { id } });
+  revalidatePath(`/gestor/${code}`);
+}
+
+/** Añade un briefing (archivo o enlace) a un proyecto ya abierto. */
+export async function anadirBriefingAction(formData: FormData) {
+  const staff = await requireStaff();
+  const code = String(formData.get("code") ?? "");
+  const project = await db.project.findUnique({ where: { code } });
+  if (!project) return;
+
+  const url = String(formData.get("linkUrl") ?? "").trim();
+  const archivo = formData.get("archivo");
+
+  if (url) {
+    await db.documento.create({
+      data: { projectId: project.id, tipo: "BRIEFING", nombre: "Briefing (enlace)", linkUrl: url, subidoPorId: staff.id },
+    });
+  }
+  if (archivo instanceof File && archivo.size > 0) {
+    const guardado = await guardarArchivo(archivo);
+    await db.documento.create({
+      data: {
+        projectId: project.id,
+        tipo: "BRIEFING",
+        nombre: guardado.fileName,
+        fileUrl: guardado.fileUrl,
+        fileData: guardado.fileData,
+        subidoPorId: staff.id,
+      },
+    });
+  }
   revalidatePath(`/gestor/${code}`);
 }

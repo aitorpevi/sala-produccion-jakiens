@@ -113,6 +113,11 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
 - **FULL** — Javier, Aina, Chiara, Mikko, Aitor, Maca. Todo, incluidas cifras.
 - **LOGISTICS** — Pablo, Carmen. Equipo, prepro, materiales, rodaje y postpro.
 - **POSTPRODUCTION** — Malo, Miquel, Lungo. Prepro, materiales y postpro.
+- **EXTERNO** — Toni, Andrea, Guillem. Las mismas fases que un producer de casa,
+  pero **solo en los proyectos donde están asignados**. Ese acotado es de alcance
+  y no de fase: vive en `filtroProyectosVisibles` y `puedeVerProyecto`
+  (`access.ts`), y se aplica en la consulta, no filtrando en memoria. A un
+  proyecto ajeno responde **404 y no 403**: un 403 confirma que existe.
 
 Fuera del equipo interno hay dos accesos más, ambos sin cuenta: colaborador
 externo por enlace mágico (`/f/[token]`, `AccessToken`) y cliente/agencia en
