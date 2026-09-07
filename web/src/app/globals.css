@@ -222,11 +222,71 @@ form.alta{padding:16px}
 .hito-proximo.u-inminente,.hito-fecha.u-inminente{border-color:var(--ink);border-width:2px;color:var(--ink);font-weight:700}
 .hito-proximo.u-vencido,.hito-fecha.u-vencido{border-color:#8a1f1f;color:#8a1f1f;font-weight:700}
 .hito-proximo.u-vacio{color:var(--mist);border-style:dashed}
+/* Fecha ya pasada sin nada por delante. Apagada, no roja: no consta si se
+   cumplió (los hitos no tienen estado de "hecho"), así que la app no opina. */
+.hito-proximo.u-pasada{color:var(--mist);border-color:var(--hair)}
 @media (max-width:720px){
   .etapas{grid-template-columns:repeat(5,1fr)}
   .etapa-paso{padding:10px 6px 12px}
   .etapa-paso .plabel{font-size:8px;letter-spacing:.04em}
-  .hito-proximo{display:none}
+  /* En una fila estrecha la fecha se come el nombre del proyecto, así que ahí
+     se cae. Dentro de una pastilla tiene su propia línea y se queda: es medio
+     motivo de mirar la pantalla. */
+  .file .hito-proximo{display:none}
+}
+
+/* ---------- Gestor: bloques de etapa con pastillas de proyecto ---------- */
+/* Vertical: una franja por etapa, de arriba abajo en el orden del recorrido.
+   Se lee como un embudo, que es como funciona el negocio, y en móvil no hay
+   nada que hacer porque ya es una sola columna. */
+.etapa-bloque{margin-bottom:26px}
+.etapa-titulo{
+  display:flex;align-items:center;gap:10px;padding-bottom:9px;margin-bottom:14px;
+  border-bottom:2px solid var(--etapa)}
+.etapa-titulo h3{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.etapa-titulo .cuenta{
+  font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);background:var(--etapa);
+  padding:2px 7px;min-width:20px;text-align:center}
+.etapa-titulo .desc{
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--mist);
+  margin-left:auto;text-align:right}
+.etapa-vacia{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mist);padding:6px 0 2px}
+
+.pastillas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pastilla{
+  display:flex;flex-direction:column;gap:5px;padding:13px 14px 12px;
+  border:1px solid var(--hair-strong);border-left:3px solid var(--etapa);background:var(--paper);
+  transition:border-color .16s ease, box-shadow .16s ease}
+.pastilla:hover{border-color:var(--ink);border-left-color:var(--etapa);box-shadow:var(--shadow)}
+.pastilla:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.p-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.p-code{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--smoke)}
+.p-nombre{font-family:var(--disp);font-weight:700;font-size:16px;line-height:1.15}
+.p-cliente{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--smoke)}
+.p-hito{font-size:12.5px;color:var(--ink);margin-top:1px}
+
+/* Quién lo está trabajando. Las iniciales dan el volumen de un vistazo y los
+   nombres debajo evitan el crucigrama: dos letras no identifican a nadie que no
+   conozcas ya, y la herramienta también la abre gente nueva. */
+.p-gente{display:flex;flex-direction:column;gap:5px;margin-top:7px;padding-top:9px;border-top:1px solid var(--hair)}
+.p-chips{display:flex;flex-wrap:wrap;gap:4px}
+.p-persona{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;
+  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--hair-strong);color:var(--smoke);background:var(--paper)}
+/* El responsable de la etapa va relleno: es a quien se le pregunta. */
+.p-persona.lead{background:var(--etapa);border-color:var(--etapa);color:var(--paper)}
+.p-nombres{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;color:var(--mist);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-sin-gente{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mist)}
+
+@media (max-width:520px){
+  .pastillas{grid-template-columns:1fr}
+  .etapa-titulo .desc{display:none}
 }
 
 /* Subcabecera dentro de un panel, para agrupar filas por etapa. */

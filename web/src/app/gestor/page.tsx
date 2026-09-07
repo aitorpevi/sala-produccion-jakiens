@@ -6,13 +6,45 @@ import { ETAPAS, ESTADOS, estaVivo, estaArchivado } from "@/lib/etapas";
 import { etiquetaFecha, urgencia } from "@/lib/hitos";
 import { MARCAS } from "@/lib/marcas";
 
+/** "Chiara" → "CH". Dos letras: con once personas no hay colisiones que importen. */
+const iniciales = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .map((p) => p[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+type HitoMinimo = { fecha: Date; fechaFin: Date | null; titulo: string };
+
 /**
- * Home del gestor: todos los proyectos de la compañía ordenados por etapa.
+ * Qué fecha enseña la pastilla: la próxima que venga, y si no queda ninguna, la
+ * última que hubo.
  *
- * Lo ve TODO el equipo interno, sea cual sea su nivel. Es el punto de la
- * herramienta: que cuando alguien entre sepa qué hay encima de la mesa y en qué
- * punto está, sin tener que preguntar. Los niveles siguen filtrando lo que se
- * puede hacer dentro de cada proyecto, no si el proyecto existe.
+ * Enseñar solo las futuras dejaba en "sin fecha" a los proyectos con todo el
+ * calendario ya pasado, que son precisamente los que hay que mirar. La pasada se
+ * marca como tal y en tono apagado, no en rojo: los hitos no tienen estado de
+ * "hecho", así que la app no sabe si esa entrega se cumplió o se le fue, y
+ * pintarla de alarma sería afirmar algo que no consta.
+ */
+function fechaAEnsenar(hitos: HitoMinimo[], hoy: Date) {
+  if (hitos.length === 0) return null;
+  const proximo = hitos.find((h) => (h.fechaFin ?? h.fecha) >= hoy);
+  if (proximo) return { hito: proximo, pasada: false };
+  return { hito: hitos[hitos.length - 1], pasada: true };
+}
+
+/**
+ * Home del gestor: la operativa de la compañía de un vistazo.
+ *
+ * Una columna por etapa, apiladas en vertical, y dentro cada proyecto es una
+ * pastilla que se abre entera de un clic. La pastilla lleva quién está
+ * trabajándola AHORA —los asignados a la etapa en la que está el proyecto— y
+ * cuál es su próxima fecha, que son las dos preguntas que se hace cualquiera al
+ * entrar: qué hay encima de la mesa y quién lo lleva.
+ *
+ * Lo ve TODO el equipo interno, sea cual sea su nivel. Los niveles filtran lo
+ * que se puede hacer dentro de cada proyecto, no si el proyecto existe.
  */
 export default async function GestorPage() {
   const staff = await requireStaff();
@@ -21,9 +53,15 @@ export default async function GestorPage() {
   const proyectos = await db.project.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      // Solo el próximo hito de cada proyecto: en la vista general interesa
-      // "qué es lo siguiente", no la lista entera. La lista está en la ficha.
-      hitos: { where: { fecha: { gte: hoy } }, orderBy: { fecha: "asc" }, take: 1 },
+      // Todos los hitos, y el que se enseña se elige abajo. Filtrar aquí por
+      // "fecha futura" hacía que un proyecto con todas las fechas pasadas
+      // dijera "sin fecha", que es mentira y justo al revés de lo que importa:
+      // ese es el que hay que mirar. Son pocas filas por proyecto.
+      hitos: { orderBy: { fecha: "asc" } },
+      // Y solo la gente asignada a la etapa en la que el proyecto está ahora.
+      // Quien trabajó la venta de algo que ya está en postpo no es quien lo
+      // lleva hoy, y sacarlo aquí despistaría más que ayudar.
+      asignaciones: { include: { staff: true }, orderBy: [{ responsable: "desc" }, { creadoEn: "asc" }] },
     },
   });
 
@@ -52,51 +90,6 @@ export default async function GestorPage() {
           </div>
         </div>
 
-        {ETAPAS.map((e) => {
-          const enEtapa = vivos.filter((p) => p.etapa === e.clave);
-          if (enEtapa.length === 0) return null;
-
-          return (
-            <div className="panel etapa" style={{ ["--etapa" as string]: e.color }} key={e.clave}>
-              <div className="phdr">
-                <h3>
-                  <span className="etapa-punto" />
-                  {e.label}
-                </h3>
-                <span className="tag">{e.descripcion}</span>
-              </div>
-              {enEtapa.map((p) => {
-                const proximo = p.hitos[0];
-                return (
-                  <div className="file" key={p.id}>
-                    <div className="ic" data-ext={p.code.split("-")[0]?.slice(0, 4) ?? "PRJ"}></div>
-                    <div className="fmeta">
-                      <div className="fn">{p.name}</div>
-                      <div className="fd">
-                        {p.client} · {p.code} ·{" "}
-                        {MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS]?.nombre ?? "Jakiens"}
-                        {p.estado !== "ACTIVO" && p.estado !== "OPORTUNIDAD"
-                          ? ` · ${ESTADOS[p.estado].label}`
-                          : ""}
-                      </div>
-                    </div>
-                    {proximo ? (
-                      <span className={`hito-proximo u-${urgencia(proximo.fecha, hoy)}`}>
-                        {etiquetaFecha(proximo.fecha, proximo.fechaFin)} · {proximo.titulo}
-                      </span>
-                    ) : (
-                      <span className="hito-proximo u-vacio">Sin fechas</span>
-                    )}
-                    <Link className="btn" href={`/gestor/${p.code}`}>
-                      Ver
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-
         {vivos.length === 0 ? (
           <div className="panel">
             <div className="empty">
@@ -107,6 +100,91 @@ export default async function GestorPage() {
             </div>
           </div>
         ) : null}
+
+        {ETAPAS.map((e) => {
+          const enEtapa = vivos.filter((p) => p.etapa === e.clave);
+
+          return (
+            <section className="etapa-bloque" style={{ ["--etapa" as string]: e.color }} key={e.clave}>
+              <div className="etapa-titulo">
+                <span className="etapa-punto" />
+                <h3>{e.label}</h3>
+                <span className="cuenta">{enEtapa.length}</span>
+                <span className="desc">{e.descripcion}</span>
+              </div>
+
+              {enEtapa.length === 0 ? (
+                // Las etapas vacías se quedan, no desaparecen: el hueco también
+                // informa —"no tenemos nada en venta" es una noticia—, y hace
+                // que el orden de la pantalla no baile cada semana.
+                <p className="etapa-vacia">Nada en esta etapa</p>
+              ) : (
+                <div className="pastillas">
+                  {enEtapa.map((p) => {
+                    const fecha = fechaAEnsenar(p.hitos, hoy);
+                    const gente = p.asignaciones.filter((a) => a.etapa === p.etapa);
+                    const marca = MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS];
+
+                    return (
+                      <Link className="pastilla" href={`/gestor/${p.code}`} key={p.id}>
+                        <div className="p-top">
+                          <span className="p-code">{p.code}</span>
+                          {fecha ? (
+                            <span
+                              className={`hito-proximo u-${
+                                fecha.pasada ? "pasada" : urgencia(fecha.hito.fecha, hoy)
+                              }`}
+                            >
+                              {fecha.pasada ? "última · " : ""}
+                              {etiquetaFecha(fecha.hito.fecha, fecha.hito.fechaFin)}
+                            </span>
+                          ) : (
+                            <span className="hito-proximo u-vacio">Sin fecha</span>
+                          )}
+                        </div>
+
+                        <div className="p-nombre">{p.name}</div>
+                        <div className="p-cliente">
+                          {p.client} · {marca?.nombre ?? "Jakiens"}
+                          {p.estado !== "ACTIVO" && p.estado !== "OPORTUNIDAD"
+                            ? ` · ${ESTADOS[p.estado].label}`
+                            : ""}
+                        </div>
+
+                        {fecha ? <div className="p-hito">{fecha.hito.titulo}</div> : null}
+
+                        {gente.length > 0 ? (
+                          <div className="p-gente">
+                            <div className="p-chips">
+                              {gente.map((a) => (
+                                <span
+                                  className={`p-persona${a.responsable ? " lead" : ""}`}
+                                  key={a.id}
+                                  title={`${a.staff.name}${a.rol ? ` · ${a.rol}` : ""}${
+                                    a.responsable ? " · responsable" : ""
+                                  }`}
+                                >
+                                  {iniciales(a.staff.name)}
+                                </span>
+                              ))}
+                            </div>
+                            <span className="p-nombres">
+                              {gente.map((a) => a.staff.name).join(" · ")}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="p-gente">
+                            <span className="p-sin-gente">Sin asignar</span>
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
 
         {archivados.length > 0 ? (
           <details className="panel">

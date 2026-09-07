@@ -9,6 +9,47 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-07 · MacBook · UX del gestor: bloques por etapa y pastillas (rama `gestor-proyectos`)
+
+Rediseño de `/gestor` a partir de la revisión de Aitor. La home pasa de una lista
+de filas dentro de paneles a **un bloque por etapa apilado en vertical**, y dentro
+cada proyecto es una **pastilla clicable entera** (`<Link>` envolviendo la
+tarjeta, no un botón al final de la fila).
+
+Cada pastilla lleva ahora **quién está trabajando el proyecto**: los asignados a
+la etapa en la que el proyecto está *ahora*, con las iniciales en cuadraditos y
+los nombres debajo. El responsable de etapa va relleno con el color de la etapa.
+Dos letras no identifican a nadie que no conozca ya al equipo, y la herramienta
+también la abre gente nueva, de ahí los nombres.
+
+Las etapas vacías **no desaparecen**: el hueco también informa ("no tenemos nada
+en venta" es una noticia) y evita que el orden de la pantalla baile cada semana.
+
+**Fallo de diseño encontrado y corregido durante la revisión.** La consulta
+traía solo hitos con `fecha >= hoy`, así que un proyecto con todo el calendario
+ya pasado mostraba "Sin fecha" — mentira, y justo al revés de lo que importa:
+ese es el que hay que mirar. Ahora se enseña la próxima fecha y, si no queda
+ninguna, la última, marcada como "última" y en tono apagado. **No en rojo**: los
+hitos no tienen estado de "hecho", así que la app no sabe si esa entrega se
+cumplió o se le fue, y pintarla de alarma sería afirmar algo que no consta.
+
+También corregida una regla de CSS del paso 2 que escondía la fecha en móvil;
+tenía sentido cuando vivía apretada en una fila, no ahora que tiene su propia
+línea dentro de la pastilla. Queda acotada a `.file .hito-proximo`.
+
+**Verificado**: las 6 pastillas son enlaces a su ficha, todas muestran fecha,
+y el layout responde bien en 1280 y en 375 (una columna).
+
+**En la base local** hay ahora 6 proyectos de ejemplo repartidos por las cinco
+etapas con sus asignaciones, para poder ver la pantalla con contenido real. No
+están en el seed: se crearon con un script de usar y tirar.
+
+**Pendiente que ha salido de aquí**: los hitos necesitan un estado de
+**completado**. Sin él no se puede distinguir "esta fecha pasó" de "esto se
+entregó", y el calendario del paso 4 va a tropezar con lo mismo.
+
+---
+
 ## 2026-09-01 · MacBook · Paso 3: equipo por etapa y presupuesto de venta (rama `gestor-proyectos`)
 
 **Esquema** (migración `20260901160000_asignaciones_y_presupuesto_venta`, solo
