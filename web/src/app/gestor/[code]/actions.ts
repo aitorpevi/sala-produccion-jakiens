@@ -9,6 +9,43 @@ import { fechaDesdeInput } from "@/lib/hitos";
 import type { Etapa, EstadoProyecto, TipoHito } from "@/generated/prisma/enums";
 import { TIPOS_HITO } from "@/lib/hitos";
 import { ESTADOS_PRESUPUESTO_VENTA } from "@/lib/presupuesto-venta";
+import { haySlackApi, prepararCanalDeProyecto } from "@/lib/slack";
+
+/**
+ * Abre el canal de Slack del proyecto y mete al equipo de casa.
+ *
+ * Se hace en el GO y no al abrir la oportunidad: se abren oportunidades que no
+ * se ganan, y cada una dejaría un canal muerto —Slack deja archivar, pero el
+ * nombre queda reservado para siempre—. Al año el buscador estaría lleno de
+ * proyectos que nunca existieron.
+ *
+ * Entra todo el equipo interno que tenga cuenta en Slack, no solo los asignados:
+ * en el GO todavía no se ha repartido la preproducción, y el objetivo de la
+ * herramienta es justamente que todo el mundo vea lo que hay encima de la mesa.
+ *
+ * Si algo falla —no hay token, Slack no responde, faltan permisos— el proyecto
+ * se gana igualmente. Avisar es un extra; producir no.
+ */
+async function abrirCanalDeSlack(project: { id: string; code: string; name: string; client: string; slackChannelId: string | null }) {
+  if (!haySlackApi() || project.slackChannelId) return;
+
+  const equipo = await db.staffUser.findMany({ select: { email: true } });
+
+  const canal = await prepararCanalDeProyecto({
+    code: project.code,
+    nombreProyecto: project.name,
+    cliente: project.client,
+    emails: equipo.map((p) => p.email),
+    urlFicha: process.env.APP_BASE_URL ? `${process.env.APP_BASE_URL}/gestor/${project.code}` : undefined,
+  });
+
+  if (canal) {
+    await db.project.update({
+      where: { id: project.id },
+      data: { slackChannelId: canal.id, slackChannelName: canal.name },
+    });
+  }
+}
 
 /** Mover un proyecto de etapa o cambiar su estado es decisión de dirección. */
 async function requireFull() {
@@ -52,6 +89,8 @@ export async function marcarGanadoAction(formData: FormData) {
     ],
     skipDuplicates: true,
   });
+
+  await abrirCanalDeSlack(project);
 
   redirect(`/p/${project.code}/equipo`);
 }

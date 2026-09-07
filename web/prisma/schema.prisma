@@ -113,6 +113,18 @@ model Project {
   logoClienteUrl  String?
   logoAgenciaUrl  String?
   driveFolderUrl  String? // carpeta de Drive con todo el material de postproducción
+  /**
+   * Canal de Slack del proyecto.
+   *
+   * `slackChannelId` lo rellena sola la app al dar el GO, si hay
+   * `SLACK_BOT_TOKEN`. Cuando existe, los avisos van por la API con el token del
+   * bot y ya no hace falta pegar ningún webhook a mano.
+   *
+   * `slackWebhookUrl` se conserva para los proyectos anteriores, que tienen su
+   * webhook puesto y seguirían funcionando igual.
+   */
+  slackChannelId   String? // ej. "C09ABCDEF"
+  slackChannelName String? // ej. "proj-eg-2611", para poder enlazarlo
   slackWebhookUrl String? // webhook del canal de Slack del proyecto, para notificaciones
   createdAt       DateTime @default(now())
 

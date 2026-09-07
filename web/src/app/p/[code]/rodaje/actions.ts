@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 import { guardarArchivo } from "@/lib/storage";
 import { crearAccesoCliente } from "@/lib/cliente";
 
@@ -162,8 +162,8 @@ export async function avisarOrdenAction(formData: FormData) {
     orderBy: { orden: "asc" },
   });
 
-  await notifySlack(
-    ctx.project.slackWebhookUrl,
+  await avisarProyecto(
+    ctx.project,
     `Orden de rodaje publicada · *${ctx.project.name}* — jornada del ${ctx.dia.fecha}` +
       `${principal ? ` en ${principal.nombre}` : ""}. ${convocados} personas convocadas.`,
   );

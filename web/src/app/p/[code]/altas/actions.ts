@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 
 function txt(formData: FormData, key: string) {
   const v = String(formData.get(key) ?? "").trim();
@@ -62,8 +62,8 @@ export async function recordarAltaAction(formData: FormData) {
   });
   if (!member) return;
 
-  await notifySlack(
-    project.slackWebhookUrl,
+  await avisarProyecto(
+    project,
     `Recordatorio de alta pendiente: *${member.person.name}* (${member.role}) en ${project.name}.`,
   );
 

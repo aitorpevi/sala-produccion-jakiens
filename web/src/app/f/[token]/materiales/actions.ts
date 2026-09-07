@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireMemberByToken } from "@/lib/access";
 import { guardarArchivo, humanFileSize } from "@/lib/storage";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 
 export async function uploadFromCollaboratorAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
@@ -29,8 +29,8 @@ export async function uploadFromCollaboratorAction(formData: FormData) {
     data: { fileUrl, fileData, fileName, sizeLabel: humanFileSize(size) },
   });
 
-  await notifySlack(
-    member.project.slackWebhookUrl,
+  await avisarProyecto(
+    member.project,
     `${member.person.name} ha subido "${material.name}" en *${member.project.name}*.`
   );
 

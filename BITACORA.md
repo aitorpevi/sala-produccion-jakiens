@@ -9,6 +9,57 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-07 · MacBook · Canal de Slack por proyecto (rama `gestor-proyectos`)
+
+Al dar el GO, la app crea el canal de Slack del proyecto, mete al equipo interno
+y publica un primer mensaje con la ficha. Decidido con Aitor: **en el GO, no al
+abrir la oportunidad**, porque se abren oportunidades que no se ganan y cada una
+dejaría un canal muerto — Slack deja archivar, pero el nombre queda reservado
+para siempre.
+
+**Lo que había** era un *incoming webhook* por proyecto: una URL pegada a mano
+que solo sabe publicar en un canal que ya existe. **Lo nuevo** es un bot token
+(`SLACK_BOT_TOKEN`), que además de publicar puede crear canales y buscar gente
+por su email.
+
+- `Project.slackChannelId` / `slackChannelName` (migración
+  `20260907110000_canal_slack_por_proyecto`, dos columnas opcionales).
+- `src/lib/slack.ts` reescrito: `crearCanal`, `buscarPorEmail`, `invitar`,
+  `publicar`, `prepararCanalDeProyecto` y `avisarProyecto`.
+- Los 12 avisos que ya existían pasan de `notifySlack(project.slackWebhookUrl, …)`
+  a `avisarProyecto(project, …)`, que prefiere el canal y cae al webhook si el
+  proyecto es de los antiguos. Así los canales nuevos reciben todo, no solo el
+  mensaje de bienvenida, y los proyectos que ya tienen webhook siguen igual.
+  La única llamada que sigue siendo `notifySlack` es la que prueba un webhook
+  recién pegado en la fase Equipo, que por definición no debe ir por el canal.
+
+**Detalles que importan:**
+
+- Slack responde `200` con `{ok:false, error:"…"}` en vez de un código HTTP de
+  error, así que mirar `res.ok` no sirve: hay que leer el cuerpo.
+- Nombres de canal: minúsculas, sin acentos, ≤80 caracteres, prefijo `proj-`.
+  Si el nombre está cogido (incluido por un canal archivado) prueba `-2`, `-3`…
+- `users.lookupByEmail` devuelve `null` para quien no esté en el workspace: los
+  producers externos no tienen cuenta, y que falte uno no impide que entren los
+  demás.
+- **Nada de esto rompe el GO.** Sin token, `haySlackApi()` es `false` y se sale
+  antes de empezar.
+
+**Verificado**: el GO funciona sin `SLACK_BOT_TOKEN` (probado con MAH-2610, sin
+un solo error en el servidor), la sanitización de nombres cubre acentos, guiones
+bajos y el límite de 80, `tsc` limpio y lint en los mismos 6 avisos
+preexistentes. **Sin probar contra Slack de verdad**: hace falta que alguien con
+permisos de administrador instale la app y ponga el token.
+
+**Pendiente / avisos:**
+
+- El despliegue a producción **no ejecuta migraciones**: `build` es solo
+  `next build`. Fusionar esta rama a `main` sin migrar antes rompería
+  producción, porque el código pediría columnas que no existen.
+- Los hitos siguen sin estado de "completado".
+
+---
+
 ## 2026-09-07 · MacBook · UX del gestor: bloques por etapa y pastillas (rama `gestor-proyectos`)
 
 Rediseño de `/gestor` a partir de la revisión de Aitor. La home pasa de una lista

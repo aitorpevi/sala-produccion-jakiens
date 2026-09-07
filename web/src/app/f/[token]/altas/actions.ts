@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireMemberByToken } from "@/lib/access";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 import { registrarAcceso } from "@/lib/auditoria";
 
 function txt(formData: FormData, key: string) {
@@ -68,8 +68,8 @@ export async function guardarDatosFiscalesAction(formData: FormData) {
   });
 
   if (completo) {
-    await notifySlack(
-      member.project.slackWebhookUrl,
+    await avisarProyecto(
+      member.project,
       `${member.person.name} ha completado sus datos de alta en *${member.project.name}*.`,
     );
   }

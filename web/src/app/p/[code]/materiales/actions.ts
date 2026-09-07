@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
 import { guardarArchivo, humanFileSize } from "@/lib/storage";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 
 export async function uploadMaterialAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
@@ -40,7 +40,7 @@ export async function uploadMaterialAction(formData: FormData) {
     });
   }
 
-  await notifySlack(project.slackWebhookUrl, `Nuevo material subido en *${project.name}*: ${name}.`);
+  await avisarProyecto(project, `Nuevo material subido en *${project.name}*: ${name}.`);
 
   revalidatePath(`/p/${code}/materiales`);
 }
@@ -91,6 +91,6 @@ export async function addMaterialLinkAction(formData: FormData) {
     });
   }
 
-  await notifySlack(project.slackWebhookUrl, `Nuevo enlace en *${project.name}*: ${name}.`);
+  await avisarProyecto(project, `Nuevo enlace en *${project.name}*: ${name}.`);
   revalidatePath(`/p/${code}/materiales`);
 }

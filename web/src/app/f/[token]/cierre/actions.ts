@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireMemberByToken } from "@/lib/access";
 import { guardarArchivo } from "@/lib/storage";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 
 /**
  * El colaborador sube su factura en PDF.
@@ -42,8 +42,8 @@ export async function subirFacturaAction(formData: FormData) {
     update: { state: "recibida", filePath: fileUrl, receivedAt: new Date() },
   });
 
-  await notifySlack(
-    member.project.slackWebhookUrl,
+  await avisarProyecto(
+    member.project,
     `${member.person.name} ha subido su factura de *${member.project.name}*.`,
   );
 

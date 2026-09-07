@@ -84,6 +84,14 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   `requireStaffAccess` redirige de `/p/[code]/*` a `/gestor/[code]`, y `/p` no
   lista oportunidades. El GO (`marcarGanadoAction`) es el único sitio que pasa un
   proyecto de venta a preproducción y crea sus siete `PhaseState`.
+- **El canal de Slack se crea en el GO, no al abrir la oportunidad.** Se abren
+  oportunidades que no se ganan, y cada una dejaría un canal muerto: Slack deja
+  archivar, pero el nombre queda reservado para siempre. Entra todo el equipo
+  interno que tenga cuenta, no solo los asignados — en el GO aún no se ha
+  repartido la preproducción. Todo esto degrada en silencio: sin
+  `SLACK_BOT_TOKEN` el proyecto se gana igual y los avisos van por webhook.
+  Regla general de `src/lib/slack.ts`: **un fallo de Slack nunca rompe la acción
+  real**. Avisar es un extra; producir no.
 - **El gestor lo ve todo el equipo interno**, sea cual sea su nivel: el objetivo
   de la herramienta es que cualquiera sepa qué hay encima de la mesa. Los niveles
   filtran lo que se puede hacer DENTRO de un proyecto, no si el proyecto existe.
@@ -135,6 +143,7 @@ tres, ojo:
 | `CRON_SECRET` | Protege el endpoint de ingesta del Radar. |
 | `YOUTUBE_API_KEY` | Fuente de YouTube del Radar. |
 | `SLACK_WEBHOOK_URL` | Webhook por defecto (cada proyecto puede tener el suyo). |
+| `SLACK_BOT_TOKEN` | Token del bot (`xoxb-…`). Sin él, la app no crea canales y los avisos siguen yendo por webhook. |
 
 > **`DATOS_PERSONALES_KEY` no tiene copia de seguridad automática.** Si se pierde
 > o se rota, los DNI, NAF, IBAN, domicilios y restricciones alimentarias que hay
