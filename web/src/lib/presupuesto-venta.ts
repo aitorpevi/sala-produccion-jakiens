@@ -6,11 +6,17 @@
  * distintas, con dos permisos distintos.
  */
 
+/**
+ * El recorrido del PPTO: alguien lo prepara, Javier lo revisa, sale al cliente.
+ *
+ * No hay "aprobado" ni "rechazado": eso le pasa al PROYECTO, no al documento, y
+ * se refleja en la etapa (pasa a preproducción) o en el estado (perdido).
+ * Tenerlo en los dos sitios garantizaba que un día dijeran cosas distintas.
+ */
 export const ESTADOS_PRESUPUESTO_VENTA = {
-  borrador: { label: "En preparación" },
-  enviado: { label: "Enviado al cliente" },
-  aprobado: { label: "Aprobado" },
-  rechazado: { label: "Rechazado" },
+  en_preparacion: { label: "En preparación" },
+  revisado_jakie: { label: "Revisado por Javier" },
+  enviado_cliente: { label: "Enviado a cliente" },
 } as const;
 
 export type EstadoPresupuestoVenta = keyof typeof ESTADOS_PRESUPUESTO_VENTA;

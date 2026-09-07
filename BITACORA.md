@@ -9,6 +9,75 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-07 · MacBook · Cimientos del rediseño de venta (rama `gestor-proyectos`)
+
+Primera mitad del feedback de Aitor sobre las pantallas de venta: **el modelo de
+datos**. Las pantallas van en la siguiente tanda.
+
+**Decisiones tomadas con él** (las cuatro se preguntaron explícitamente):
+
+1. **Código/ID**: `Project.code` se queda como identificador interno estable que
+   vive en la URL y no cambia nunca — está en 112 sitios y 11 carpetas de ruta, y
+   si cambiara moriría cualquier enlace ya compartido. La referencia real del
+   PPTO ("PPTO 57A-2026-Kids-Consum-Mascotas") va en `refPresupuesto`, se captura
+   al subir el PDF y es la que se muestra como identificador.
+2. **Producers externos** (Toni, Andrea, Guillem): nivel `EXTERNO` nuevo. Ven las
+   mismas fases que un producer de casa, pero solo en los proyectos donde están
+   asignados. Ese acotado es de alcance, no de fase: se resuelve en `access.ts`.
+3. **Marca anunciante**: campo de texto con autocompletado, no tabla. Promovible
+   cuando haga falta medir por marca.
+4. **Avisos**: DM de Slack + dentro de la app. **Email descartado**: la app no
+   envía ni un correo. El Excel de altas que `REQUISITOS.md` §3.4 describe como
+   "se envía por email a gestoría" en realidad **se descarga**.
+
+**Esquema** (migración `20260907140000_clientes_documentos_y_venta`):
+
+- `Cliente` — nombre, CIF, dirección fiscal, contacto y condiciones de pago. La
+  base para medir recurrencia y estacionalidad, y para que los datos fiscales
+  lleguen solos a contabilidad.
+- `Documento` (`BRIEFING` / `PRESUPUESTO` / `OTRO`) — archivo subido o enlace a
+  Drive, Dropbox o Canva. No se reutiliza `Material` porque aquel está atado al
+  reparto por colaborador y aquí no hay nada de eso.
+- `Aviso` — avisos dentro de la app. Existe porque no hay correo y el DM de
+  Slack depende de un token que puede no estar: si el aviso no sale, el trabajo
+  asignado sigue aquí esperando.
+- `Project.marca`, `Project.clienteId`, `Project.refPresupuesto`.
+- `PresupuestoVenta`: fuera `importe`, dentro `asignadoAId`. Estados nuevos:
+  `en_preparacion · revisado_jakie · enviado_cliente`. Ya no hay "aprobado" ni
+  "rechazado" — eso le pasa al proyecto, no al documento, y tenerlo en los dos
+  sitios garantizaba que un día dijeran cosas distintas.
+
+**`Project.brand` → `Project.productora`**, y `lib/marcas.ts` → `lib/productoras.ts`.
+`brand` significaba la productora (Jakiens/Ricorico); al añadir `marca` para la
+marca anunciante habrían convivido dos campos parecidos con sentidos distintos.
+Era un bug esperando.
+
+**La migración va escrita a mano** y traslada el dato antes de borrar: el diff
+generado proponía `DROP COLUMN "brand"` a secas. Además crea la ficha de cliente
+de cada nombre que ya estaba escrito en los proyectos y las enlaza, para que la
+tabla no naciera vacía.
+
+**Tropiezo que dejó rastro**: la primera versión tenía las claves ajenas antes de
+las columnas que referencian. Al fallar, Postgres **no deshizo** los `CREATE
+TYPE` ni los `CREATE TABLE` —Prisma no envuelve el archivo en una transacción
+cuando hay `ALTER TYPE ... ADD VALUE`— y los reintentos se atascaban. Los tipos
+van ahora con `IF NOT EXISTS` y un `DO $$ ... EXCEPTION` para que la migración
+sea re-ejecutable. Conviene recordarlo: **una migración a medias no se deshace sola.**
+
+**Verificado sobre datos poblados**, no sobre una base vacía: `productora`
+conservada (Vodafone sigue en Ricorico), seis fichas de cliente creadas desde los
+proyectos existentes y enlazadas, estado del presupuesto traducido. `tsc` limpio,
+`build` completo, lint en los 6 avisos preexistentes, y las cinco pantallas
+principales responden 200.
+
+**Lo que queda de este feedback** (siguiente tanda): rehacer el formulario de
+oportunidad (cliente de la base, marca, sin código, sin formato, briefing con
+adjunto, "Comentarios Canva", equipo y asignación de presupuesto), quitar el alta
+de fechas en venta, subir etapa/estado al encabezado fusionados, y el panel de
+presupuesto con PDF.
+
+---
+
 ## 2026-09-07 · MacBook · Canal de Slack por proyecto (rama `gestor-proyectos`)
 
 Al dar el GO, la app crea el canal de Slack del proyecto, mete al equipo interno

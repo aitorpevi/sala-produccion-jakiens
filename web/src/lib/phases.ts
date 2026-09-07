@@ -52,6 +52,7 @@ export const STAFF_TIER_LABEL: Record<StaffTier, string> = {
   FULL: "Acceso total",
   LOGISTICS: "Logística y creativo",
   POSTPRODUCTION: "Postproducción",
+  EXTERNO: "Producer externo",
 };
 
 export const STAFF_PHASE_ACCESS: Record<StaffTier, PhaseKey[]> = {
@@ -61,6 +62,11 @@ export const STAFF_PHASE_ACCESS: Record<StaffTier, PhaseKey[]> = {
   // bloque de presupuesto de esa página está reservado a FULL.
   LOGISTICS: ["equipo", "prepro", "materiales", "rodaje", "postpro"],
   POSTPRODUCTION: ["prepro", "materiales", "postpro"],
+  // Un producer externo opera igual que uno de casa dentro del proyecto que
+  // lleva. Lo que le distingue no son las fases que ve, sino QUÉ PROYECTOS ve:
+  // solo aquellos en los que está asignado. Eso se resuelve en `access.ts`, no
+  // aquí, porque es una cuestión de alcance y no de fase.
+  EXTERNO: ["equipo", "prepro", "materiales", "rodaje", "postpro"],
 };
 
 export function staffPhaseAllowed(tier: StaffTier, key: PhaseKey) {

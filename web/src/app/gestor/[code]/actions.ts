@@ -204,21 +204,18 @@ export async function guardarPresupuestoVentaAction(formData: FormData) {
   const project = await db.project.findUnique({ where: { code } });
   if (!project) return;
 
-  const bruto = String(formData.get("importe") ?? "").replace(/[^\d]/g, "");
-  const importe = bruto ? Number(bruto) : null;
   const estado = String(formData.get("estado") ?? "borrador");
   const notas = String(formData.get("notas") ?? "").trim();
 
   if (!(estado in ESTADOS_PRESUPUESTO_VENTA)) return;
 
   const datos = {
-    importe,
     estado,
     notas: notas || null,
     actualizadoPorId: staff.id,
-    // La fecha de envío se sella sola al pasar a "enviado": es un dato que
-    // luego se consulta ("¿cuándo mandamos esto?") y nadie lo apunta a mano.
-    enviadoEn: estado === "enviado" ? new Date() : undefined,
+    // La fecha de envío se sella sola al pasar a "enviado a cliente": es un
+    // dato que luego se consulta ("¿cuándo mandamos esto?") y nadie lo apunta.
+    enviadoEn: estado === "enviado_cliente" ? new Date() : undefined,
   };
 
   await db.presupuestoVenta.upsert({

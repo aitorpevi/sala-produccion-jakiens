@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { generateTokenString } from "@/lib/tokens";
 
-export { MARCAS, marcaDe } from "@/lib/marcas";
+export { PRODUCTORAS, productoraDe } from "@/lib/productoras";
 
 const TTL_DIAS = 60;
 

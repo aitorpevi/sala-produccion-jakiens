@@ -4,7 +4,7 @@ import { requireStaff } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
 import { ETAPAS, ESTADOS, estaVivo, estaArchivado } from "@/lib/etapas";
 import { etiquetaFecha, urgencia } from "@/lib/hitos";
-import { MARCAS } from "@/lib/marcas";
+import { PRODUCTORAS } from "@/lib/productoras";
 
 /** "Chiara" → "CH". Dos letras: con once personas no hay colisiones que importen. */
 const iniciales = (nombre: string) =>
@@ -123,7 +123,7 @@ export default async function GestorPage() {
                   {enEtapa.map((p) => {
                     const fecha = fechaAEnsenar(p.hitos, hoy);
                     const gente = p.asignaciones.filter((a) => a.etapa === p.etapa);
-                    const marca = MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS];
+                    const marca = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS];
 
                     return (
                       <Link className="pastilla" href={`/gestor/${p.code}`} key={p.id}>

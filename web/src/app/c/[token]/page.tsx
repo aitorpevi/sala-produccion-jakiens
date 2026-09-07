@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { resolverAccesoCliente, ordenParaCliente, marcaDe } from "@/lib/cliente";
+import { resolverAccesoCliente, ordenParaCliente, productoraDe } from "@/lib/cliente";
 import { AhoraMismo } from "./AhoraMismo";
 import "./cliente.css";
 
@@ -31,7 +31,7 @@ export default async function VistaClientePage({
   if (!acceso) notFound();
 
   const project = acceso.project;
-  const marca = marcaDe(project.brand);
+  const marca = productoraDe(project.productora);
   const { dias, restriccionesAnonimas } = await ordenParaCliente(project.id);
 
   // La jornada de hoy si la hay; si no, la primera que quede por delante.
@@ -49,7 +49,7 @@ export default async function VistaClientePage({
 
         <span className="cl-kicker">
           {acceso.tipo === "agencia" ? "Para la agencia" : "Para el cliente"} ·{" "}
-          {project.brand === "RICORICO" ? "Ricorico" : "Jakiens"}
+          {project.productora === "RICORICO" ? "Ricorico" : "Jakiens"}
         </span>
         <h1 className="cl-titulo">{project.name}</h1>
         <span className="cl-sub">

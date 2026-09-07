@@ -9,7 +9,7 @@
  * se renderizan en el navegador.
  */
 
-export const MARCAS = {
+export const PRODUCTORAS = {
   JAKIENS: {
     nombre: "Jakiens",
     logo: "/marca/jakiens.svg",
@@ -26,10 +26,10 @@ export const MARCAS = {
   },
 } as const;
 
-export type ClaveMarca = keyof typeof MARCAS;
+export type ClaveProductora = keyof typeof PRODUCTORAS;
 
-export const CLAVES_MARCA = Object.keys(MARCAS) as ClaveMarca[];
+export const CLAVES_PRODUCTORA = Object.keys(PRODUCTORAS) as ClaveProductora[];
 
-export function marcaDe(brand: string | null | undefined) {
-  return MARCAS[brand as ClaveMarca] ?? MARCAS.JAKIENS;
+export function productoraDe(productora: string | null | undefined) {
+  return PRODUCTORAS[productora as ClaveProductora] ?? PRODUCTORAS.JAKIENS;
 }

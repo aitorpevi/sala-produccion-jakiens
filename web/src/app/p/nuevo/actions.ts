@@ -3,15 +3,15 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
-import { CLAVES_MARCA, type ClaveMarca } from "@/lib/marcas";
+import { CLAVES_PRODUCTORA, type ClaveProductora } from "@/lib/productoras";
 
 export async function createProjectAction(formData: FormData) {
   const staff = await requireStaff();
   if (staff.tier !== "FULL") return;
 
-  const brandBruto = String(formData.get("brand") ?? "JAKIENS").trim().toUpperCase();
-  const brand: ClaveMarca = CLAVES_MARCA.includes(brandBruto as ClaveMarca)
-    ? (brandBruto as ClaveMarca)
+  const productoraBruta = String(formData.get("productora") ?? "JAKIENS").trim().toUpperCase();
+  const productora: ClaveProductora = CLAVES_PRODUCTORA.includes(productoraBruta as ClaveProductora)
+    ? (productoraBruta as ClaveProductora)
     : "JAKIENS";
 
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
@@ -42,7 +42,7 @@ export async function createProjectAction(formData: FormData) {
 
   const project = await db.project.create({
     data: {
-      brand,
+      productora,
       code,
       client,
       name,

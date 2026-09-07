@@ -5,7 +5,7 @@ import { requireStaff } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
 import { ETAPAS, ESTADOS, etapa as etapaDe, ordenEtapa } from "@/lib/etapas";
 import { TIPOS_HITO, etiquetaFecha, urgencia } from "@/lib/hitos";
-import { MARCAS } from "@/lib/marcas";
+import { PRODUCTORAS } from "@/lib/productoras";
 import { ESTADOS_PRESUPUESTO_VENTA, etiquetaEstadoPresupuesto } from "@/lib/presupuesto-venta";
 import {
   actualizarSituacionAction,
@@ -16,8 +16,6 @@ import {
   guardarPresupuestoVentaAction,
   marcarGanadoAction,
 } from "./actions";
-
-const eur = (n: number) => "€" + n.toLocaleString("es-ES");
 
 /** "Chiara" → "CH". Para el cuadradito de la ficha, igual que el código de proyecto. */
 const iniciales = (nombre: string) =>
@@ -86,7 +84,7 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
           <div className="cell">
             <span className="k">Productora</span>
             <span className="v">
-              {MARCAS[(project.brand ?? "JAKIENS") as keyof typeof MARCAS]?.nombre ?? "Jakiens"}
+              {PRODUCTORAS[(project.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS]?.nombre ?? "Jakiens"}
             </span>
           </div>
           <div className="cell">
@@ -298,9 +296,7 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
             <div className="file">
               <div className="fmeta">
                 <div className="fn">
-                  {project.presupuestoVenta?.importe != null
-                    ? eur(project.presupuestoVenta.importe)
-                    : "Sin cifra todavía"}
+                  {project.presupuestoVenta ? "Presupuesto abierto" : "Todavía sin preparar"}
                 </div>
                 <div className="fd">
                   {project.presupuestoVenta
@@ -314,16 +310,6 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
             </div>
             <form action={guardarPresupuestoVentaAction} className="alta">
               <div className="fgrid">
-                <div className="field">
-                  <label htmlFor="importe">Importe cotizado (€)</label>
-                  <input
-                    id="importe"
-                    name="importe"
-                    inputMode="numeric"
-                    defaultValue={project.presupuestoVenta?.importe ?? ""}
-                    placeholder="45000"
-                  />
-                </div>
                 <div className="field">
                   <label htmlFor="estado-presu">Estado</label>
                   <select

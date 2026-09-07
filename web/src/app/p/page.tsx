@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
 import { logoutAction } from "@/app/actions";
 import { firstAllowedPhaseForStaff, STAFF_TIER_LABEL } from "@/lib/phases";
-import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
+import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
 import { ESTADOS, estaArchivado, estaVivo } from "@/lib/etapas";
 import { IconoRadar } from "@/components/IconoRadar";
 
@@ -23,10 +23,10 @@ export default async function ProyectosPage() {
 
   // Un bloque por productora. El flujo de trabajo es el mismo en las dos, pero
   // verlas separadas evita confundir un rodaje de 40k con una pieza de social.
-  const porMarca = CLAVES_MARCA.map((clave) => ({
+  const porProductora = CLAVES_PRODUCTORA.map((clave) => ({
     clave,
-    marca: MARCAS[clave],
-    proyectos: activos.filter((p) => (p.brand ?? "JAKIENS") === clave),
+    productora: PRODUCTORAS[clave],
+    proyectos: activos.filter((p) => (p.productora ?? "JAKIENS") === clave),
   })).filter((b) => b.proyectos.length > 0);
 
   return (
@@ -79,12 +79,12 @@ export default async function ProyectosPage() {
           </div>
         </div>
 
-        {porMarca.map(({ clave, marca, proyectos }) => (
-          <div className="panel marca" style={{ ["--marca" as string]: marca.color }} key={clave}>
+        {porProductora.map(({ clave, productora, proyectos }) => (
+          <div className="panel etapa" style={{ ["--etapa" as string]: productora.color }} key={clave}>
             <div className="phdr">
               <h3>
-                <span className="marca-punto" />
-                {marca.nombre}
+                <span className="etapa-punto" />
+                {productora.nombre}
               </h3>
               <span className="tag">
                 {proyectos.length} {proyectos.length === 1 ? "proyecto" : "proyectos"}
@@ -131,7 +131,7 @@ export default async function ProyectosPage() {
                   <div className="fn">{p.name}</div>
                   <div className="fd">
                     {ESTADOS[p.estado].label} ·{" "}
-                    {MARCAS[(p.brand ?? "JAKIENS") as keyof typeof MARCAS]?.nombre ?? "Jakiens"} ·{" "}
+                    {PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS]?.nombre ?? "Jakiens"} ·{" "}
                     {p.client} · {p.code}
                   </div>
                 </div>

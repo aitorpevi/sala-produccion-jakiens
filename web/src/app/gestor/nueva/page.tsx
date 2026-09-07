@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
-import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
+import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
 import { crearOportunidadAction } from "./actions";
 
 const ERRORES: Record<string, string> = {
@@ -45,11 +45,11 @@ export default async function NuevaOportunidadPage({
           <form action={crearOportunidadAction} className="alta">
             <div className="fgrid">
               <div className="field">
-                <label htmlFor="brand">Productora</label>
-                <select id="brand" name="brand" defaultValue="JAKIENS" required>
-                  {CLAVES_MARCA.map((k) => (
+                <label htmlFor="productora">Productora</label>
+                <select id="productora" name="productora" defaultValue="JAKIENS" required>
+                  {CLAVES_PRODUCTORA.map((k) => (
                     <option key={k} value={k}>
-                      {MARCAS[k].nombre} · {MARCAS[k].descripcion}
+                      {PRODUCTORAS[k].nombre} · {PRODUCTORAS[k].descripcion}
                     </option>
                   ))}
                 </select>
