@@ -436,3 +436,19 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .aviso{display:block;padding:10px 11px;font-size:13px;line-height:1.35;border-bottom:1px solid var(--hair)}
 .aviso:hover{background:var(--bone)}
 .avisos-lista form{padding:8px 4px 4px;display:flex;justify-content:flex-end}
+
+/* Cabecera del tablero en dos líneas: arriba lo que se hace, debajo lo que se
+   consulta. Los secundarios van como enlace y no como botón, para que no
+   compitan con el que abre un proyecto. */
+.acciones-cabecera{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.acciones-fila{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.acciones-fila.secundaria{gap:16px}
+.enlace-sec{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);
+  border-bottom:1px solid transparent;padding-bottom:2px}
+.enlace-sec:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* Logo de la productora en la pastilla. Alto fijo y ancho automático: los dos
+   son wordmarks con proporciones muy distintas (Jakiens 4:1, Ricorico 5:1). */
+.p-logo{height:12px;width:auto;display:block;flex:none}

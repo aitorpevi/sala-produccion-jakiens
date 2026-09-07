@@ -91,34 +91,41 @@ export default async function GestorPage({
       <main>
         <div className="mod-head">
           <div className="htxt">
-            <span className="step">Gestor</span>
-            <h2>Todo lo que hay en marcha</h2>
+            <h2>Proyectos activos</h2>
           </div>
+          {/*
+            Dos líneas a propósito. Arriba lo que se hace a diario —abrir una
+            oportunidad o dar de alta un proyecto ganado—; debajo, y más ligero,
+            lo que se consulta de vez en cuando. Tenerlo todo en una fila daba a
+            Radar el mismo peso que al botón que arranca un proyecto.
+          */}
           <div className="acciones-cabecera">
-            <Link href="/radar" className="btn ghost" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
-              <IconoRadar size={14} />
-              Radar
-            </Link>
-            {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
-              <>
-                <Link href="/gestor/clientes" className="btn ghost">
-                  Clientes
-                </Link>
-                <Link href="/colaboradores" className="btn ghost">
-                  Colaboradores
-                </Link>
-              </>
-            ) : null}
             {staff.tier === "FULL" ? (
-              <>
+              <div className="acciones-fila">
                 <Link href="/p/nuevo" className="btn ghost">
                   + Nuevo proyecto
                 </Link>
                 <Link href="/gestor/nueva" className="btn solid">
                   + Nueva oportunidad
                 </Link>
-              </>
+              </div>
             ) : null}
+            <div className="acciones-fila secundaria">
+              <Link href="/radar" className="enlace-sec">
+                <IconoRadar size={13} />
+                Radar
+              </Link>
+              {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
+                <>
+                  <Link href="/gestor/clientes" className="enlace-sec">
+                    Clientes
+                  </Link>
+                  <Link href="/colaboradores" className="enlace-sec">
+                    Colaboradores
+                  </Link>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -172,12 +179,25 @@ export default async function GestorPage({
                   {enEtapa.map((p) => {
                     const fecha = fechaAEnsenar(p.hitos, hoy);
                     const gente = p.asignaciones.filter((a) => a.etapa === p.etapa);
-                    const productora = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS];
+                    const productora = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS] ?? PRODUCTORAS.JAKIENS;
 
                     return (
                       <Link className="pastilla" href={`/gestor/${p.code}`} key={p.id}>
                         <div className="p-top">
-                          <span className="p-code">{p.code}</span>
+                          {/*
+                            El logo identifica de un vistazo de quién es el
+                            proyecto, que a ojo se lee antes que un nombre en
+                            texto. Se usa `<img>` y no `next/image`: son SVG
+                            estáticos de kilobytes, vectoriales, y el optimizador
+                            no tiene nada que optimizar en ellos.
+                          */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            className="p-logo"
+                            src={productora.logo}
+                            alt={productora.nombre}
+                            height={12}
+                          />
                           {fecha ? (
                             <span
                               className={`hito-proximo u-${
@@ -194,7 +214,8 @@ export default async function GestorPage({
 
                         <div className="p-nombre">{p.name}</div>
                         <div className="p-cliente">
-                          {p.client} · {productora?.nombre ?? "Jakiens"}
+                          {p.client}
+                          {p.marca ? ` · ${p.marca}` : ""} · {p.refPresupuesto ?? p.code}
                           {p.estado !== "ACTIVO" && p.estado !== "OPORTUNIDAD"
                             ? ` · ${ESTADOS[p.estado].label}`
                             : ""}

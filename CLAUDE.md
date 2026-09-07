@@ -172,4 +172,15 @@ terminar, y nunca los dos ordenadores a la vez sin haber subido lo anterior.
 **Cada push a `main` despliega a producción en Vercel.** Para cambios que puedan
 romper algo, rama aparte y fusionar cuando esté verificado.
 
+El build es `prisma migrate deploy && next build`, así que **las migraciones se
+aplican en el despliegue**. Antes no se aplicaban en ninguna parte, y fusionar
+código que pedía columnas nuevas habría reventado producción.
+
+> **Ojo con el orden en una migración que borre columnas.** Si `migrate deploy`
+> falla a mitad, Postgres **no lo deshace** (Prisma no envuelve el archivo en una
+> transacción cuando hay `ALTER TYPE ... ADD VALUE`), el build se cae y Vercel
+> sigue sirviendo el código anterior — que ahora habla con un esquema a medias.
+> Por eso una migración que quite algo se aplica mejor a mano y mirando, antes de
+> fusionar.
+
 Antes de hacer push, añade tu entrada a `BITACORA.md`.
