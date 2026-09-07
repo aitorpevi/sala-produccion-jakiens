@@ -47,3 +47,6 @@ next-env.d.ts
 /.claude/
 /.windsurf/
 /skills-lock.json
+
+# Volcados de la base de datos: llevan datos personales en claro.
+/copias
