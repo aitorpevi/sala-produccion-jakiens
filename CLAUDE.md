@@ -18,8 +18,13 @@ Una sola app Next.js con tres módulos que comparten base de datos y sesión:
 | Módulo | Rutas | Qué hace |
 |---|---|---|
 | **Radar** | `/radar` | Research y tendencias. Ingesta de Wikipedia, GDELT, Bluesky, HN, RSS, Telegram, YouTube y Reddit. Independiente del resto. |
-| **Gestor de proyectos** | `/gestor` | Visión transversal: todos los proyectos por etapa, sus fechas y quién trabaja en qué. Arranca en **venta**, antes del GO. |
-| **Herramienta de producción** | `/p/[code]/...` | Operativa de un proyecto concreto. Se desbloquea con el GO. |
+| **Gestor de proyectos** | `/gestor` | **La única puerta.** Todos los proyectos por etapa, sus fechas y quién trabaja en qué. Arranca en **venta**, antes del GO. |
+| **Herramienta de producción** | `/p/[code]/...` | Operativa de un proyecto concreto. Se entra desde su ficha; se desbloquea con el GO. |
+
+`/p` (el selector de proyectos) **ya no es una pantalla**: redirige a `/gestor`.
+Eran la misma lista vista dos veces, y dos puertas al mismo sitio hacen que
+alguien abra la que no toca, no encuentre lo que busca y pregunte por WhatsApp.
+La separación por productora, que sí era útil, vuelve como filtro.
 
 El gestor **no es una app aparte**: son rutas nuevas sobre las mismas tablas. La
 ficha de proyecto del gestor y la sala de producción son la misma fila de
@@ -92,6 +97,10 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   `SLACK_BOT_TOKEN` el proyecto se gana igual y los avisos van por webhook.
   Regla general de `src/lib/slack.ts`: **un fallo de Slack nunca rompe la acción
   real**. Avisar es un extra; producir no.
+- **El código del proyecto se genera solo y no cambia nunca** (`src/lib/codigo.ts`).
+  Vive en la URL, en 11 carpetas de ruta, y en los enlaces que la gente pega en
+  Slack. El identificador que usa la gente es `refPresupuesto`, la referencia del
+  PPTO, que se captura al subir el PDF y es la que se muestra.
 - **El gestor lo ve todo el equipo interno**, sea cual sea su nivel: el objetivo
   de la herramienta es que cualquiera sepa qué hay encima de la mesa. Los niveles
   filtran lo que se puede hacer DENTRO de un proyecto, no si el proyecto existe.

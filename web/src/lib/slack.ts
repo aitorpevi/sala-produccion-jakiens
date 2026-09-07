@@ -210,3 +210,18 @@ export async function notifySlack(webhookUrl: string | null | undefined, text: s
     console.error("[slack] no se pudo enviar el aviso:", e);
   }
 }
+
+/**
+ * Mensaje privado a una persona, por su email de trabajo.
+ *
+ * `chat.postMessage` admite un id de usuario como canal y Slack abre el DM solo.
+ * Devuelve `false` si no hay token o si esa persona no está en el workspace: el
+ * aviso dentro de la app ya se habrá guardado igualmente, así que el trabajo
+ * asignado no se pierde por esto.
+ */
+export async function enviarDM(email: string, text: string) {
+  if (!haySlackApi()) return false;
+  const userId = await buscarPorEmail(email);
+  if (!userId) return false;
+  return publicar(userId, text);
+}

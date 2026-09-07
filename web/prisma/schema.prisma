@@ -406,8 +406,11 @@ model Documento {
   project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tipo      TipoDocumento @default(OTRO)
   nombre    String
-  /// Uno de los dos, nunca los dos: archivo subido a Vercel Blob, o enlace.
+  /// Uno de los dos, nunca los dos: archivo subido, o enlace a la nube.
   fileUrl   String?
+  /// Igual que en `Material`: sin Vercel Blob configurado el contenido cae aquí
+  /// en vez de dejar las subidas inservibles en un entorno sin Blob.
+  fileData  Bytes?
   linkUrl   String?
   subidoPorId String?
   subidoPor   StaffUser? @relation(fields: [subidoPorId], references: [id], onDelete: SetNull)

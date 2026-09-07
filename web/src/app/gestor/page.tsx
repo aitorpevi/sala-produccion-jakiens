@@ -4,7 +4,8 @@ import { requireStaff } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
 import { ETAPAS, ESTADOS, estaVivo, estaArchivado } from "@/lib/etapas";
 import { etiquetaFecha, urgencia } from "@/lib/hitos";
-import { PRODUCTORAS } from "@/lib/productoras";
+import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
+import { IconoRadar } from "@/components/IconoRadar";
 
 /** "Chiara" → "CH". Dos letras: con once personas no hay colisiones que importen. */
 const iniciales = (nombre: string) =>
@@ -46,9 +47,18 @@ function fechaAEnsenar(hitos: HitoMinimo[], hoy: Date) {
  * Lo ve TODO el equipo interno, sea cual sea su nivel. Los niveles filtran lo
  * que se puede hacer dentro de cada proyecto, no si el proyecto existe.
  */
-export default async function GestorPage() {
+export default async function GestorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ productora?: string }>;
+}) {
   const staff = await requireStaff();
   const hoy = new Date();
+  // Al fusionar las dos pantallas se perdía la separación por productora, que
+  // sí era útil: evita leer del tirón un rodaje de 40k y una pieza de social.
+  // Vuelve como filtro en vez de como dos listas.
+  const { productora: filtro } = await searchParams;
+  const filtroActivo = CLAVES_PRODUCTORA.includes(filtro as never) ? filtro : null;
 
   const proyectos = await db.project.findMany({
     orderBy: { createdAt: "desc" },
@@ -65,7 +75,9 @@ export default async function GestorPage() {
     },
   });
 
-  const vivos = proyectos.filter((p) => estaVivo(p.estado));
+  const vivos = proyectos
+    .filter((p) => estaVivo(p.estado))
+    .filter((p) => !filtroActivo || (p.productora ?? "JAKIENS") === filtroActivo);
   const archivados = proyectos.filter((p) => estaArchivado(p.estado));
 
   return (
@@ -78,17 +90,45 @@ export default async function GestorPage() {
             <span className="step">Gestor</span>
             <h2>Todo lo que hay en marcha</h2>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/p" className="btn ghost">
-              Sala de producción
+          <div className="acciones-cabecera">
+            <Link href="/radar" className="btn ghost" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <IconoRadar size={14} />
+              Radar
             </Link>
-            {staff.tier === "FULL" ? (
-              <Link href="/gestor/nueva" className="btn solid">
-                + Nueva oportunidad
+            {staff.tier === "FULL" || staff.tier === "LOGISTICS" ? (
+              <Link href="/colaboradores" className="btn ghost">
+                Colaboradores
               </Link>
+            ) : null}
+            {staff.tier === "FULL" ? (
+              <>
+                <Link href="/p/nuevo" className="btn ghost">
+                  + Nuevo proyecto
+                </Link>
+                <Link href="/gestor/nueva" className="btn solid">
+                  + Nueva oportunidad
+                </Link>
+              </>
             ) : null}
           </div>
         </div>
+
+        <nav className="filtros" aria-label="Filtrar por productora">
+          <Link className={`filtro${filtroActivo ? "" : " on"}`} href="/gestor">
+            Todo
+          </Link>
+          {CLAVES_PRODUCTORA.map((k) => (
+            <Link
+              key={k}
+              className={`filtro${filtroActivo === k ? " on" : ""}`}
+              href={`/gestor?productora=${k}`}
+              style={{ ["--etapa" as string]: PRODUCTORAS[k].color }}
+            >
+              <span className="etapa-punto" />
+              {PRODUCTORAS[k].nombre}
+            </Link>
+          ))}
+        </nav>
 
         {vivos.length === 0 ? (
           <div className="panel">
@@ -123,7 +163,7 @@ export default async function GestorPage() {
                   {enEtapa.map((p) => {
                     const fecha = fechaAEnsenar(p.hitos, hoy);
                     const gente = p.asignaciones.filter((a) => a.etapa === p.etapa);
-                    const marca = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS];
+                    const productora = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS];
 
                     return (
                       <Link className="pastilla" href={`/gestor/${p.code}`} key={p.id}>
@@ -145,7 +185,7 @@ export default async function GestorPage() {
 
                         <div className="p-nombre">{p.name}</div>
                         <div className="p-cliente">
-                          {p.client} · {marca?.nombre ?? "Jakiens"}
+                          {p.client} · {productora?.nombre ?? "Jakiens"}
                           {p.estado !== "ACTIVO" && p.estado !== "OPORTUNIDAD"
                             ? ` · ${ESTADOS[p.estado].label}`
                             : ""}

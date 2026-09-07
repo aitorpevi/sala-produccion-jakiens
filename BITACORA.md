@@ -9,6 +9,55 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-07 · MacBook · Una sola pantalla, y el alta de oportunidad rehecha
+
+**Las dos pantallas se fusionan.** Propuesta de Aitor, y tenía razón: `/p` y
+`/gestor` eran la misma lista de proyectos vista dos veces. Todo lo que salía en
+`/p` —preproducción, rodaje, postpo, cierre— ya aparecía en el gestor agrupado
+por etapa. `/p` pasa a redirigir (no se borra: hay enlaces sueltos por Slack y en
+los marcadores de la gente). La sala de producción de cada proyecto no cambia.
+
+Lo que sí se perdía era la separación por productora, que evitaba leer del tirón
+un rodaje de 40k y una pieza de social. Vuelve como **filtro** en la cabecera, no
+como dos listas. Los accesos a Radar, Colaboradores, Nuevo proyecto y Nueva
+oportunidad se juntan ahí.
+
+**Alta de oportunidad rehecha** con el feedback:
+
+- **Cliente/Agencia** con autocompletado sobre la tabla `Cliente`, y creación
+  automática de la ficha si no existía. Pedir un alta previa convertiría en
+  trámite lo que tiene que ser un minuto.
+- **Marca** con autocompletado sobre las ya usadas.
+- **Fuera el código**: se genera solo (`src/lib/codigo.ts`, iniciales + año +
+  correlativo). Con una sola palabra coge tres letras, no una: "McCann" daba
+  "M-26-001" y eso no distingue nada en cuanto haya dos clientes con la misma
+  inicial.
+- **Fuera el formato**: viene en el documento de la agencia con más detalle del
+  que cabe en una caja.
+- **Briefing**: archivo o enlace a Drive/Dropbox/Canva.
+- **"Qué piden" → "Comentarios Canva"**.
+- **Equipo y responsable** se asignan aquí, no después.
+- **"Prepara el presupuesto"**: solo lista a quien puede verlo, y al asignarlo se
+  crea un `Aviso` en la app y se intenta el DM de Slack.
+
+**Los avisos se guardan siempre en la base antes de intentar Slack.** Ese orden
+importa: un aviso que solo vive en un canal externo se pierde el día que ese
+canal falla, y nadie se entera de que se ha perdido.
+
+**Verificado end to end**: creada la oportunidad "Verano" (McCann / Cerveza
+Turia) con briefing en Canva, entrega el 19 SEP, Mikko como responsable con
+Malo, Miquel y Carmen, y presupuesto asignado a Chiara. El aviso a Chiara se
+generó con su enlace. El filtro de Ricorico deja solo Vodafone. El login
+aterriza en `/gestor`. `tsc` limpio, `build` completo, lint en los 6 avisos de
+siempre.
+
+**Queda de este feedback**: la ficha de proyecto — quitar el alta de fechas en
+venta, subir etapa y estado al encabezado fusionados, el panel de presupuesto con
+PDF y la captura de `refPresupuesto`, las pantallas de clientes, el punto de
+avisos en la cabecera y acotar el nivel `EXTERNO` a sus proyectos.
+
+---
+
 ## 2026-09-07 · MacBook · Cimientos del rediseño de venta (rama `gestor-proyectos`)
 
 Primera mitad del feedback de Aitor sobre las pantallas de venta: **el modelo de
