@@ -157,7 +157,7 @@ tres, ojo:
 | `CRON_SECRET` | Protege el endpoint de ingesta del Radar. |
 | `YOUTUBE_API_KEY` | Fuente de YouTube del Radar. |
 | `SLACK_WEBHOOK_URL` | Webhook por defecto (cada proyecto puede tener el suyo). |
-| `SLACK_BOT_TOKEN` | Token del bot (`xoxb-…`). Sin él, la app no crea canales y los avisos siguen yendo por webhook. |
+| `SLACK_BOT_TOKEN` | Token del bot (`xoxb-…`). Sin él, la app no crea canales y los avisos siguen yendo por webhook. Para darlo de alta: [slack-app-manifest.yml](slack-app-manifest.yml). |
 
 > **`DATOS_PERSONALES_KEY` no tiene copia de seguridad automática.** Si se pierde
 > o se rota, los DNI, NAF, IBAN, domicilios y restricciones alimentarias que hay
