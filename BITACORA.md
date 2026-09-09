@@ -9,6 +9,41 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-09 · MacBook · Pantalla de permisos (fallo encontrado en producción)
+
+Aitor probó la app desplegada y el desplegable de **"prepara el presupuesto"
+salía vacío**: solo "sin asignar", sin una sola persona.
+
+**Causa**: `StaffUser.accesoPresupuestoVenta` se creó con `DEFAULT false`, y en
+producción **nadie ha corrido nunca el seed** — las cuentas del equipo existen
+desde agosto. Así que la columna entró en `false` para los once y ahí se quedó.
+En local no se veía porque el seed sí pone los cinco a `true`. Reproducido
+poniéndolos todos a `false`: el desplegable se vacía igual.
+
+**La solución no es tocar la base**, es que el permiso se pueda cambiar desde la
+aplicación: `/gestor/equipo`, solo para el nivel FULL. Un permiso que únicamente
+se puede cambiar con acceso a la base es un permiso que en la práctica no se
+cambia, y esto ya lo demostró bloqueando a Aitor en la primera prueba real.
+
+La pantalla avisa en rojo si no lo tiene nadie —que es el estado en el que está
+producción ahora mismo— y deja registro en `AccesoDatosPersonales` de quién
+concede o retira el acceso a una cifra confidencial.
+
+Sí, alguien de dirección puede dárselo a sí mismo. Son quienes deciden esto en
+la vida real; fingir lo contrario solo añadiría un trámite.
+
+**Verificado en build de producción local**: con todos a `false`, se le da
+acceso a Chiara desde la pantalla y aparece en el desplegable.
+
+**Sin resolver**: Aitor dice que *"una vez creo la oportunidad el site se
+rompe"* en Vercel. **No se ha podido reproducir** — funciona en desarrollo y en
+un build de producción local, con las mismas condiciones de permisos. Es algo
+del entorno de Vercel. Hipótesis a descartar con el log delante: el límite de 10
+segundos por función del plan Hobby, con la latencia de Prisma Accelerate sobre
+unas cuantas consultas seguidas. Falta el log de Vercel.
+
+---
+
 ## 2026-09-09 · MacBook · Desplegado en producción
 
 **Está en producción.** `main` fusionado (12 commits), Vercel desplegado, y las

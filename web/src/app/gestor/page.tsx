@@ -125,6 +125,13 @@ export default async function GestorPage({
                   </Link>
                 </>
               ) : null}
+              {staff.tier === "FULL" ? (
+                <>
+                  <Link href="/gestor/equipo" className="enlace-sec">
+                    Permisos
+                  </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
