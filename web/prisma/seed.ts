@@ -15,7 +15,8 @@ const PROJECT = {
   shootLabel: "24–25 JUL 2026",
   location: "Valencia · Estudio + set gastro",
   format: 'Spot 30" + 6 cápsulas RRSS',
-  status: "activo",
+  etapa: "POSTPRODUCCION" as const,
+  estado: "ACTIVO" as const,
   preproInicio: "14 JUL",
   preproFin: "23 JUL",
   rodajeInicio: "24 JUL",
@@ -161,18 +162,36 @@ const MATERIALS = [
   },
 ];
 
-const STAFF: { name: string; email: string; tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION" }[] = [
-  { name: "Javier", email: "javier@jakiens.com", tier: "FULL" },
-  { name: "Aina", email: "aina@jakiens.com", tier: "FULL" },
-  { name: "Chiara", email: "chiara@jakiens.com", tier: "FULL" },
+/**
+ * `venta` es el acceso al presupuesto de VENTA (lo que se cotiza al cliente), y
+ * no se deduce del nivel: Pablo y Carmen son LOGISTICS y sí ven costes para
+ * negociar tarifas, pero no lo que cobramos.
+ *
+ * Mikko queda fuera: es dirección creativa y no interviene en la cotización
+ * (confirmado por Aitor el 2026-09-07, no es un olvido).
+ */
+const STAFF: {
+  name: string;
+  email: string;
+  tier: "FULL" | "LOGISTICS" | "POSTPRODUCTION" | "EXTERNO";
+  venta?: boolean;
+}[] = [
+  { name: "Javier", email: "javier@jakiens.com", tier: "FULL", venta: true },
+  { name: "Aina", email: "aina@jakiens.com", tier: "FULL", venta: true },
+  { name: "Chiara", email: "chiara@jakiens.com", tier: "FULL", venta: true },
   { name: "Mikko", email: "mikko@jakiens.com", tier: "FULL" },
-  { name: "Aitor", email: "aitor@jakiens.com", tier: "FULL" },
-  { name: "Maca", email: "maca@jakiens.com", tier: "FULL" },
+  { name: "Aitor", email: "aitor@jakiens.com", tier: "FULL", venta: true },
+  { name: "Maca", email: "maca@jakiens.com", tier: "FULL", venta: true },
   { name: "Pablo", email: "pablo@jakiens.com", tier: "LOGISTICS" },
   { name: "Carmen", email: "carmen@jakiens.com", tier: "LOGISTICS" },
   { name: "Malo", email: "malo@jakiens.com", tier: "POSTPRODUCTION" },
   { name: "Miquel", email: "miquel@jakiens.com", tier: "POSTPRODUCTION" },
   { name: "Lungo", email: "lungo@jakiens.com", tier: "POSTPRODUCTION" },
+  // Producers externos. Tienen cuenta para poder trabajar, pero solo ven los
+  // proyectos en los que están asignados: no la cartera de la compañía.
+  { name: "Toni", email: "toni@jakiens.com", tier: "EXTERNO" },
+  { name: "Andrea", email: "andrea@jakiens.com", tier: "EXTERNO" },
+  { name: "Guillem", email: "guillem@jakiens.com", tier: "EXTERNO" },
 ];
 
 function tempPasswordFor(name: string) {
@@ -186,11 +205,12 @@ async function main() {
     const tempPassword = tempPasswordFor(s.name);
     await db.staffUser.upsert({
       where: { email: s.email },
-      update: { name: s.name, tier: s.tier },
+      update: { name: s.name, tier: s.tier, accesoPresupuestoVenta: s.venta ?? false },
       create: {
         email: s.email,
         name: s.name,
         tier: s.tier,
+        accesoPresupuestoVenta: s.venta ?? false,
         passwordHash: await bcrypt.hash(tempPassword, 10),
       },
     });

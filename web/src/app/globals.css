@@ -183,6 +183,130 @@ form.alta{padding:16px}
 .panel.marca .phdr h3{display:flex;align-items:center;gap:9px}
 .marca-punto{width:9px;height:9px;background:var(--marca);display:inline-block;flex:0 0 auto}
 
+/* ---------- Gestor: etapas de negocio ---------- */
+/* El color entra como --etapa desde el servidor (ver src/lib/etapas.ts).
+   El color identifica la ETAPA, nunca el proyecto: con quince proyectos activos
+   no hay quince colores que nadie distinga, y el proyecto ya se identifica por
+   su código. */
+.panel.etapa{border-left:3px solid var(--etapa)}
+.panel.etapa .phdr h3{display:flex;align-items:center;gap:9px}
+.etapa-punto{width:9px;height:9px;background:var(--etapa);display:inline-block;flex:0 0 auto}
+.proj .etapa-v{display:inline-flex;align-items:center;gap:7px}
+
+.etapas{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--ink);margin-top:22px}
+.etapa-paso{
+  text-align:left;padding:14px 12px 16px;border-right:1px solid var(--hair);position:relative;
+  background:var(--paper);display:block;width:100%}
+.etapa-paso:last-child{border-right:none}
+.etapa-paso .num{font-family:var(--disp);font-weight:800;font-size:22px;line-height:1}
+.etapa-paso .plabel{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);margin-top:8px;display:block}
+.etapa-paso .etapa-punto{position:absolute;top:14px;right:12px;width:7px;height:7px}
+/* La etapa actual se rellena con su color; las pasadas se apagan pero siguen
+   legibles, porque el recorrido cuenta de dónde viene el proyecto. */
+.etapa-paso.actual{background:var(--etapa)}
+.etapa-paso.actual .num,.etapa-paso.actual .plabel{color:var(--paper)}
+.etapa-paso.actual .etapa-punto{background:var(--paper)}
+.etapa-paso.pasada{opacity:.45}
+.etapa-paso.futura .num{color:var(--mist)}
+.etapa-paso.futura .etapa-punto{background:transparent;border:1px solid var(--hair-strong)}
+
+/* Próximo hito y fecha de hito. La urgencia va por PESO Y BORDE, no por color:
+   el color ya lo gasta la etapa, y dos escalas de color compitiendo en la misma
+   tarjeta hacen que no se lea ninguna de las dos. */
+.hito-proximo,.hito-fecha{
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  padding:5px 9px;border:1px solid var(--hair-strong);color:var(--smoke);white-space:nowrap;flex:none}
+.hito-fecha{min-width:104px;text-align:center}
+.hito-proximo.u-lejano{}
+.hito-proximo.u-proximo,.hito-fecha.u-proximo{border-color:var(--ink);color:var(--ink)}
+.hito-proximo.u-inminente,.hito-fecha.u-inminente{border-color:var(--ink);border-width:2px;color:var(--ink);font-weight:700}
+.hito-proximo.u-vencido,.hito-fecha.u-vencido{border-color:#8a1f1f;color:#8a1f1f;font-weight:700}
+.hito-proximo.u-vacio{color:var(--mist);border-style:dashed}
+/* Fecha ya pasada sin nada por delante. Apagada, no roja: no consta si se
+   cumplió (los hitos no tienen estado de "hecho"), así que la app no opina. */
+.hito-proximo.u-pasada{color:var(--mist);border-color:var(--hair)}
+@media (max-width:720px){
+  .etapas{grid-template-columns:repeat(5,1fr)}
+  .etapa-paso{padding:10px 6px 12px}
+  .etapa-paso .plabel{font-size:8px;letter-spacing:.04em}
+  /* En una fila estrecha la fecha se come el nombre del proyecto, así que ahí
+     se cae. Dentro de una pastilla tiene su propia línea y se queda: es medio
+     motivo de mirar la pantalla. */
+  .file .hito-proximo{display:none}
+}
+
+/* ---------- Gestor: bloques de etapa con pastillas de proyecto ---------- */
+/* Vertical: una franja por etapa, de arriba abajo en el orden del recorrido.
+   Se lee como un embudo, que es como funciona el negocio, y en móvil no hay
+   nada que hacer porque ya es una sola columna. */
+.etapa-bloque{margin-bottom:26px}
+.etapa-titulo{
+  display:flex;align-items:center;gap:10px;padding-bottom:9px;margin-bottom:14px;
+  border-bottom:2px solid var(--etapa)}
+.etapa-titulo h3{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.etapa-titulo .cuenta{
+  font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);background:var(--etapa);
+  padding:2px 7px;min-width:20px;text-align:center}
+.etapa-titulo .desc{
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--mist);
+  margin-left:auto;text-align:right}
+.etapa-vacia{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mist);padding:6px 0 2px}
+
+.pastillas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pastilla{
+  display:flex;flex-direction:column;gap:5px;padding:13px 14px 12px;
+  border:1px solid var(--hair-strong);border-left:3px solid var(--etapa);background:var(--paper);
+  transition:border-color .16s ease, box-shadow .16s ease}
+.pastilla:hover{border-color:var(--ink);border-left-color:var(--etapa);box-shadow:var(--shadow)}
+.pastilla:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.p-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.p-code{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--smoke)}
+.p-nombre{font-family:var(--disp);font-weight:700;font-size:16px;line-height:1.15}
+.p-cliente{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--smoke)}
+.p-hito{font-size:12.5px;color:var(--ink);margin-top:1px}
+
+/* Quién lo está trabajando. Las iniciales dan el volumen de un vistazo y los
+   nombres debajo evitan el crucigrama: dos letras no identifican a nadie que no
+   conozcas ya, y la herramienta también la abre gente nueva. */
+.p-gente{display:flex;flex-direction:column;gap:5px;margin-top:7px;padding-top:9px;border-top:1px solid var(--hair)}
+.p-chips{display:flex;flex-wrap:wrap;gap:4px}
+.p-persona{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;
+  width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--hair-strong);color:var(--smoke);background:var(--paper)}
+/* El responsable de la etapa va relleno: es a quien se le pregunta. */
+.p-persona.lead{background:var(--etapa);border-color:var(--etapa);color:var(--paper)}
+.p-nombres{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.03em;color:var(--mist);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-sin-gente{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mist)}
+
+@media (max-width:520px){
+  .pastillas{grid-template-columns:1fr}
+  .etapa-titulo .desc{display:none}
+}
+
+/* Subcabecera dentro de un panel, para agrupar filas por etapa. */
+.sub-hdr{
+  display:flex;align-items:center;gap:8px;padding:9px 16px;background:var(--bone);
+  border-bottom:1px solid var(--hair);
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--smoke)}
+
+/* Casilla con su explicación al lado, para las que no se entienden solas. */
+.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--smoke);line-height:1.35;padding-top:3px}
+.check input{width:auto;flex:none;margin-top:2px}
+
+/* Bloque con dato confidencial. La banda no decora: avisa de que lo que hay
+   dentro no lo ve todo el mundo, para que nadie lo lea en alto en una reunión
+   dando por hecho que sí. */
+.panel.confidencial{border-left:3px solid var(--ink)}
+.panel.confidencial > .phdr{background:var(--ink)}
+.panel.confidencial > .phdr h3{color:var(--paper)}
+.panel.confidencial > .phdr .tag{color:var(--mist)}
+
 /* ---------- Radar: termómetro y maquetación modular ---------- */
 /* Par divergente validado (dataviz skill): naranja=sube, azul=se enfría.
    Pasa las seis comprobaciones del validador en claro y en oscuro. Nunca
@@ -259,3 +383,72 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .meme-tile:hover .meme-overlay{opacity:1}
 .meme-fuente{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase}
 .meme-vistas{flex:0 0 auto}
+
+/* ---------- Gestor: alta de oportunidad ---------- */
+.field .ayuda{font-size:11.5px;color:var(--smoke);line-height:1.35;margin-top:1px}
+.equipo-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.persona-check{
+  display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--hair-strong);
+  cursor:pointer;font-size:13.5px;background:var(--paper)}
+.persona-check:hover{border-color:var(--ink)}
+.persona-check input{width:auto;flex:none}
+/* Marcar a alguien tiene que verse de un vistazo al repasar el reparto. */
+.persona-check:has(input:checked){background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* Filtro por productora en la cabecera del tablero. Repone la separación que
+   daban las dos pantallas antes de fusionarlas, sin partir la lista en dos. */
+.acciones-cabecera{display:flex;gap:10px;flex-wrap:wrap}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.filtro{
+  display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);
+  border:1px solid var(--hair-strong);padding:7px 12px;background:var(--paper)}
+.filtro:hover{border-color:var(--ink);color:var(--ink)}
+.filtro.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.filtro.on .etapa-punto{background:var(--paper)}
+
+/* ---------- Ficha: situación junto al título ---------- */
+/* Etapa y estado suben al encabezado. Estaban al final de la página y eran dos
+   controles que se pisaban: si está en preproducción, está ganado. */
+.proj-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.proj-titulo{min-width:0;flex:1}
+.proj-situacion{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:6px}
+.proj-situacion form{display:flex;align-items:center;gap:8px}
+.estado-chip{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--etapa,var(--hair-strong));color:var(--etapa,var(--smoke));padding:7px 11px}
+.nota-panel{
+  padding:16px;font-size:13px;color:var(--smoke);border-top:1px solid var(--hair);background:var(--bone)}
+
+/* Avisos en la cabecera. `<details>` en vez de un menú con estado: funciona sin
+   JavaScript y no hay nada que se quede abierto al navegar. */
+.avisos{position:relative}
+.avisos > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.avisos > summary::-webkit-details-marker{display:none}
+.avisos-punto{
+  font-family:var(--mono);font-size:9px;font-weight:700;background:var(--ink);color:var(--paper);
+  min-width:16px;height:16px;display:inline-grid;place-items:center;padding:0 4px}
+.avisos[open] > summary{background:var(--ink);color:var(--paper)}
+.avisos[open] > summary .avisos-punto{background:var(--paper);color:var(--ink)}
+.avisos-lista{
+  position:absolute;right:0;top:calc(100% + 8px);width:min(340px,80vw);z-index:50;
+  background:var(--paper);border:1px solid var(--ink);box-shadow:var(--shadow);padding:6px}
+.aviso{display:block;padding:10px 11px;font-size:13px;line-height:1.35;border-bottom:1px solid var(--hair)}
+.aviso:hover{background:var(--bone)}
+.avisos-lista form{padding:8px 4px 4px;display:flex;justify-content:flex-end}
+
+/* Cabecera del tablero en dos líneas: arriba lo que se hace, debajo lo que se
+   consulta. Los secundarios van como enlace y no como botón, para que no
+   compitan con el que abre un proyecto. */
+.acciones-cabecera{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.acciones-fila{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.acciones-fila.secundaria{gap:16px}
+.enlace-sec{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--smoke);
+  border-bottom:1px solid transparent;padding-bottom:2px}
+.enlace-sec:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* Logo de la productora en la pastilla. Alto fijo y ancho automático: los dos
+   son wordmarks con proporciones muy distintas (Jakiens 4:1, Ricorico 5:1). */
+.p-logo{height:12px;width:auto;display:block;flex:none}

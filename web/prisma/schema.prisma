@@ -17,6 +17,11 @@ enum StaffTier {
   FULL           // acceso total: Javier, Aina, Chiara, Mikko, Aitor, Maca
   LOGISTICS      // sin contabilidad: Pablo, Carmen
   POSTPRODUCTION // montaje/edición: Malo, Miquel, Lungo
+  /// Producer externo (Toni, Andrea, Guillem...). Tiene cuenta propia, pero
+  /// SOLO ve los proyectos en los que está asignado: ni el tablero completo ni
+  /// cifra alguna. Antes solo podían entrar por enlace mágico a un proyecto, y
+  /// eso impedía repartirles trabajo desde el gestor.
+  EXTERNO
 }
 
 model StaffUser {
@@ -25,10 +30,101 @@ model StaffUser {
   passwordHash String
   name         String
   tier         StaffTier
+  /**
+   * Acceso al presupuesto de VENTA — lo que se cotiza al cliente.
+   *
+   * Va aparte del `tier` a propósito. El nivel decide qué fases se ven; esto
+   * decide quién ve la cifra que se le pasa al cliente, y las dos cosas no se
+   * solapan: Carmen es nivel LOGISTICS y sí ve costes para negociar tarifas,
+   * pero no ve lo que cobramos. Meterlo en el tier obligaría a inventar un
+   * nivel nuevo por cada combinación.
+   */
+  accesoPresupuestoVenta Boolean @default(false)
   createdAt    DateTime  @default(now())
+
+  hitos                    Hito[]
+  asignaciones             AsignacionEtapa[]
+  presupuestosActualizados PresupuestoVenta[] @relation("actualizadoPor")
+  presupuestosAsignados    PresupuestoVenta[] @relation("asignadoA")
+  documentos               Documento[]
+  avisos                   Aviso[]
+}
+
+// ---------- Clientes y agencias ----------
+
+/**
+ * Quien encarga y paga el trabajo. Casi siempre una agencia; a veces la marca
+ * directamente.
+ *
+ * Se saca de `Project.client` (que era texto suelto) para poder responder a
+ * preguntas que antes había que reconstruir a mano: qué cliente repite, en qué
+ * época del año llama cada uno, cuánto trabajo ha entrado por cada uno. Y para
+ * que los datos fiscales viajen solos hasta contabilidad en vez de volver a
+ * teclearse en cada factura.
+ *
+ * `Project.client` se conserva como el nombre mostrado: los proyectos antiguos
+ * no tienen ficha de cliente y tienen que seguir leyéndose igual.
+ */
+model Cliente {
+  id     String @id @default(cuid())
+  nombre String @unique
+  /// Datos fiscales. Vacíos hasta que hagan falta: al abrir una oportunidad
+  /// nadie tiene el CIF a mano, y exigirlo ahí solo conseguiría que se
+  /// inventara.
+  cif              String?
+  direccionFiscal  String?
+  contactoNombre   String?
+  contactoEmail    String?
+  contactoTelefono String?
+  condicionesPago  String? // "30 días fecha factura", "60 días", ...
+  notas            String? @db.Text
+  activo           Boolean @default(true)
+  creadoEn         DateTime @default(now())
+
+  proyectos Project[]
 }
 
 // ---------- Proyecto ----------
+
+/**
+ * Etapa de negocio: dónde está el proyecto en la vida de la compañía.
+ *
+ * NO confundir con las siete fases operativas de `PhaseState` (equipo, prepro,
+ * materiales, altas, rodaje, postpro, cierre), que son el desglose del trabajo
+ * del producer a partir del GO. La etapa es el eje que ve toda la compañía en el
+ * gestor de proyectos; la fase es el eje que opera el producer dentro de la sala
+ * de producción. Una etapa contiene varias fases, no al revés.
+ *
+ * VENTA es la novedad: hasta ahora un proyecto solo se daba de alta cuando ya se
+ * había ganado, así que la mitad del trabajo de la compañía —la que se hace para
+ * ganarlo— no existía en ninguna herramienta.
+ */
+enum Etapa {
+  VENTA
+  PREPRODUCCION
+  RODAJE
+  POSTPRODUCCION
+  CIERRE
+}
+
+/**
+ * Si el proyecto sigue vivo, y por qué no lo está si no lo está.
+ *
+ * Antes eran dos valores de texto (`activo` | `cerrado`), que bastaban cuando un
+ * proyecto solo se creaba tras ganarlo. Con la etapa de venta hacen falta los
+ * finales que no son un cierre: PERDIDO y PAUSADO.
+ *
+ * PERDIDO no borra ni esconde nada: el proyecto se archiva y se puede consultar.
+ * Lo que se trabajó para intentar ganarlo es tan real como lo que se produce, y
+ * saber cuánto se presentó frente a cuánto se ganó es información de negocio.
+ */
+enum EstadoProyecto {
+  OPORTUNIDAD // en venta, todavía sin decidir
+  ACTIVO // ganado y en marcha
+  PERDIDO // no se ganó — se archiva y se consulta
+  PAUSADO // congelado por el cliente, puede volver
+  CERRADO // entregado y cerrado económicamente
+}
 
 model Project {
   id              String   @id @default(cuid())
@@ -40,11 +136,32 @@ model Project {
   shootLabel      String
   location        String
   format          String
-  status          String   @default("activo") // activo | cerrado
-  // Marca que produce. Jakiens y Ricorico comparten fisco, equipo y directorio de
-  // colaboradores: lo que cambia es la escala del proyecto, las plantillas y el
-  // discurso comercial, no los datos. Por eso es un campo, no una base separada.
-  brand           String   @default("JAKIENS") // JAKIENS | RICORICO
+  etapa           Etapa          @default(PREPRODUCCION)
+  estado          EstadoProyecto @default(ACTIVO)
+  // Productora que lo hace. Jakiens y Ricorico comparten fisco, equipo y
+  // directorio de colaboradores: lo que cambia es la escala del proyecto, las
+  // plantillas y el discurso comercial, no los datos. Por eso es un campo y no
+  // una base separada.
+  //
+  // Se llamaba `brand`. Se renombró al añadir `marca` (la marca anunciante):
+  // tener `brand` y `marca` significando cosas distintas en el mismo modelo era
+  // una confusión esperando a convertirse en bug.
+  productora      String   @default("JAKIENS") // JAKIENS | RICORICO
+  /// Marca anunciante: Turia, Consum... Texto libre con autocompletado sobre
+  /// las ya usadas, para que no acabe escrita de diez formas distintas.
+  marca           String?
+  clienteId       String?
+  cliente         Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  /**
+   * Referencia del presupuesto, tal cual la nombra cada productora:
+   * "PPTO 57A-2026-Kids-Consum-Mascotas". Es el identificador que usa la gente.
+   *
+   * NO es `code`. `code` se genera solo al abrir la oportunidad, vive en la URL
+   * y no cambia nunca —si cambiara, moriría cualquier enlace ya compartido—.
+   * Esta referencia se captura al subir el PDF del presupuesto, que es cuando
+   * por fin se conoce, y es la que se muestra como identificador del proyecto.
+   */
+  refPresupuesto  String?
   // Fechas clave del kickoff — texto libre (igual que el resto de fechas de la app), no Date real.
   preproInicio        String?
   preproFin           String?
@@ -58,10 +175,26 @@ model Project {
   logoClienteUrl  String?
   logoAgenciaUrl  String?
   driveFolderUrl  String? // carpeta de Drive con todo el material de postproducción
+  /**
+   * Canal de Slack del proyecto.
+   *
+   * `slackChannelId` lo rellena sola la app al dar el GO, si hay
+   * `SLACK_BOT_TOKEN`. Cuando existe, los avisos van por la API con el token del
+   * bot y ya no hace falta pegar ningún webhook a mano.
+   *
+   * `slackWebhookUrl` se conserva para los proyectos anteriores, que tienen su
+   * webhook puesto y seguirían funcionando igual.
+   */
+  slackChannelId   String? // ej. "C09ABCDEF"
+  slackChannelName String? // ej. "proj-eg-2611", para poder enlazarlo
   slackWebhookUrl String? // webhook del canal de Slack del proyecto, para notificaciones
   createdAt       DateTime @default(now())
 
   phaseStates      PhaseState[]
+  documentos       Documento[]
+  hitos            Hito[]
+  asignaciones     AsignacionEtapa[]
+  presupuestoVenta PresupuestoVenta?
   members          ProjectMember[]
   materials        Material[]
   callSheetDays    CallSheetDay[]
@@ -80,6 +213,232 @@ model PhaseState {
   state     String // done | live | next
 
   @@unique([projectId, key])
+}
+
+// ---------- Hitos: las fechas que ve toda la compañía ----------
+
+/**
+ * Qué clase de fecha es. Determina cómo se pinta en el calendario y qué avisos
+ * genera: un RODAJE bloquea la jornada de todo el equipo, una ENTREGA_CLIENTE
+ * solo compromete a quien la trabaja.
+ */
+enum TipoHito {
+  ENTREGA_PROPUESTA // venta: cuándo hay que presentar
+  PPM // pre-production meeting
+  RODAJE
+  ENTREGA_MATERIAL
+  ENTREGA_MONTAJE
+  ENTREGA_CLIENTE
+  CIERRE_ECONOMICO
+  OTRO
+}
+
+/** Cuánto duele fallar esta fecha, con independencia de lo cerca que esté. */
+enum Criticidad {
+  NORMAL
+  ALTA
+  CRITICA
+}
+
+/**
+ * Una fecha señalada de un proyecto.
+ *
+ * Es la ÚNICA fuente de verdad del calendario, y la única parte del modelo con
+ * fechas de verdad. El resto de la app guarda las fechas como texto libre
+ * ("14 JUL", "24–25 JUL 2026") porque se escriben a mano y así nadie pelea con
+ * formatos; la contrapartida es que sobre ese texto no se puede ordenar, ni
+ * filtrar por trimestre, ni detectar que dos cosas caen el mismo día. Un
+ * calendario trimestral necesita `DateTime`.
+ *
+ * Los campos de texto del proyecto NO desaparecen: se siguen mostrando donde ya
+ * se mostraban, como etiqueta legible. Lo que hace el hito es guardar además la
+ * fecha real detrás.
+ *
+ * `fecha` y `fechaFin` son fechas de calendario, no instantes: un rodaje es el
+ * día 24, no las 00:00 del 24 en un huso concreto. De ahí `@db.Date`.
+ */
+model Hito {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  etapa     Etapa
+  tipo      TipoHito @default(OTRO)
+  titulo    String
+  /// Día del hito. Para un rango (rodaje de varias jornadas, ventana de
+  /// preproducción) es el primer día y `fechaFin` el último.
+  fecha     DateTime  @db.Date
+  fechaFin  DateTime? @db.Date
+  criticidad Criticidad @default(NORMAL)
+  notas     String?
+
+  /// Quién responde de esta fecha. Es del equipo interno: los hitos los mueve
+  /// quien lidera la etapa, no el colaborador que ejecuta.
+  responsableId String?
+  responsable   StaffUser? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+
+  /**
+   * De dónde sale el hito. Los derivados no se editan a mano: se regeneran
+   * desde su origen, porque si el producer cambia la fecha de una jornada en la
+   * orden de rodaje, el calendario tiene que seguirla sin que nadie lo recuerde.
+   *
+   * manual    — lo creó una persona en el gestor
+   * callsheet — proyectado desde CallSheetDay.fechaISO
+   * proyecto  — proyectado desde las fechas de texto del alta de proyecto
+   */
+  origen   String  @default("manual")
+  origenId String?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // El calendario maestro consulta por rango de fechas sobre todos los
+  // proyectos a la vez; la ficha de proyecto, por proyecto.
+  @@index([fecha])
+  @@index([projectId, fecha])
+  // Evita duplicar un hito derivado cada vez que se regenera su origen. En
+  // Postgres varios NULL no colisionan, así que los manuales quedan libres.
+  @@unique([origen, origenId])
+}
+
+// ---------- Quién trabaja cada etapa ----------
+
+/**
+ * Una persona del equipo interno asignada a un proyecto EN UNA ETAPA CONCRETA.
+ *
+ * El equipo cambia según la etapa y por eso la asignación cuelga de las dos
+ * cosas: en venta trabajan creativos y montadores preparando la presentación,
+ * en preproducción entra un producer que antes no estaba, y en postpo vuelven
+ * los de montaje. Guardar "quién trabaja en este proyecto" a secas perdería
+ * justo la información que hace falta para saber quién tiene qué encima esta
+ * semana.
+ *
+ * Es para el equipo interno (`StaffUser`), no para colaboradores externos: esos
+ * ya viven en `ProjectMember`, con su tarifa, sus jornadas y su alta laboral.
+ * Son dos cosas distintas —una es reparto de trabajo, la otra es contratación—
+ * y unificarlas obligaría a inventar tarifas para gente que va en nómina.
+ *
+ * `responsable` marca al lead de la etapa: quien nutre la información y a quien
+ * se le pregunta. Debería haber uno por etapa, pero no se fuerza en el modelo:
+ * hay semanas en que un proyecto cambia de manos y tener cero o dos durante un
+ * par de días es la realidad, no un error que deba bloquear el guardado.
+ */
+model AsignacionEtapa {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  staffUserId String
+  staff       StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  etapa       Etapa
+  /// Qué hace en esta etapa: "Producer", "Montaje", "Cotización"... Texto libre
+  /// porque el reparto real no cabe en una lista cerrada.
+  rol         String?
+  responsable Boolean   @default(false)
+  creadoEn    DateTime  @default(now())
+
+  @@unique([projectId, staffUserId, etapa])
+  // "Qué me toca a mí" consulta por persona y etapa.
+  @@index([staffUserId, etapa])
+}
+
+// ---------- Presupuesto de venta ----------
+
+/**
+ * Lo que se cotiza al cliente.
+ *
+ * Tabla aparte y no un campo de `Project` porque su visibilidad es distinta de
+ * la del resto del proyecto: la ve un grupo concreto de personas
+ * (`StaffUser.accesoPresupuestoVenta`) y no todo el que puede abrir la ficha. Si
+ * fuese una columna de `Project`, cualquier consulta que devuelva el proyecto la
+ * arrastraría, y bastaría un olvido en una pantalla nueva para filtrarla.
+ *
+ * No confundir con el presupuesto de COSTE, que es lo que pagamos y ya vive
+ * repartido en `ProjectMember.rate`, `dias` y `presupuestoGasto`.
+ */
+model PresupuestoVenta {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /**
+   * Dónde está el PPTO en su recorrido: lo prepara alguien, lo revisa Javier,
+   * y sale al cliente. No se guarda el importe a propósito (decisión de Aitor,
+   * 2026-09-07): aquí solo interesa el documento que se comparte y quién puede
+   * verlo. La contrapartida, dicha en su momento, es que no se puede comparar
+   * lo presupuestado con lo ganado.
+   */
+  estado    String  @default("en_preparacion") // en_preparacion | revisado_jakie | enviado_cliente
+  notas     String? @db.Text
+  enviadoEn DateTime?
+
+  /// A quién le toca prepararlo. Javier lo reparte y a esa persona le llega el
+  /// aviso; sin esto, "que alguien lo haga" no es de nadie.
+  asignadoAId String?
+  asignadoA   StaffUser? @relation("asignadoA", fields: [asignadoAId], references: [id], onDelete: SetNull)
+
+  actualizadoEn    DateTime   @updatedAt
+  actualizadoPorId String?
+  actualizadoPor   StaffUser? @relation("actualizadoPor", fields: [actualizadoPorId], references: [id], onDelete: SetNull)
+}
+
+// ---------- Documentos ----------
+
+enum TipoDocumento {
+  BRIEFING // lo que manda la agencia: PDF, Word o enlace a Drive/Dropbox/Canva
+  PRESUPUESTO // el PPTO que se comparte con cliente
+  OTRO
+}
+
+/**
+ * Un documento de la etapa de venta: un archivo subido o un enlace a la nube.
+ *
+ * Las dos formas, porque las dos ocurren: la agencia manda un PDF por correo,
+ * pero el brief vive muchas veces en un Canva o un Drive que sigue cambiando.
+ * Subir una copia de eso significaría trabajar sobre una versión congelada
+ * mientras la buena se mueve fuera. Es el mismo criterio que ya sigue
+ * `Material` en la sala de producción.
+ *
+ * No se reutiliza `Material` porque aquel está atado al reparto por
+ * colaborador (`MaterialTarget`, permisos por perfil) y aquí no hay nada de
+ * eso: el briefing lo ve el equipo, y el presupuesto quien tenga permiso.
+ */
+model Documento {
+  id        String        @id @default(cuid())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tipo      TipoDocumento @default(OTRO)
+  nombre    String
+  /// Uno de los dos, nunca los dos: archivo subido, o enlace a la nube.
+  fileUrl   String?
+  /// Igual que en `Material`: sin Vercel Blob configurado el contenido cae aquí
+  /// en vez de dejar las subidas inservibles en un entorno sin Blob.
+  fileData  Bytes?
+  linkUrl   String?
+  subidoPorId String?
+  subidoPor   StaffUser? @relation(fields: [subidoPorId], references: [id], onDelete: SetNull)
+  creadoEn  DateTime @default(now())
+
+  @@index([projectId, tipo])
+}
+
+// ---------- Avisos dentro de la app ----------
+
+/**
+ * Un aviso para una persona concreta.
+ *
+ * Existe porque la app no envía correo —no hay ningún proveedor configurado— y
+ * el DM de Slack depende de un token que puede no estar puesto. Esto funciona
+ * siempre y no depende de nadie: si el aviso de Slack no sale, el trabajo
+ * asignado no se pierde, sigue aquí esperando.
+ */
+model Aviso {
+  id          String   @id @default(cuid())
+  staffUserId String
+  staff       StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  texto       String
+  url         String?
+  leidoEn     DateTime?
+  creadoEn    DateTime @default(now())
+
+  @@index([staffUserId, leidoEn])
 }
 
 // ---------- Personas ----------

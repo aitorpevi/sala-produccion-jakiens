@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto } from "@/lib/slack";
 
 export async function updateDriveLinkAction(formData: FormData) {
   const code = String(formData.get("code") ?? "");
@@ -17,8 +17,8 @@ export async function updateDriveLinkAction(formData: FormData) {
   });
 
   if (driveFolderUrl) {
-    await notifySlack(
-      project.slackWebhookUrl,
+    await avisarProyecto(
+      project,
       `${staff.name} ha actualizado la carpeta de Drive de postproducción en *${project.name}*.`
     );
   }
@@ -37,8 +37,8 @@ export async function addMaterialRequestAction(formData: FormData) {
     data: { projectId: project.id, description, requestedBy: staff.name },
   });
 
-  await notifySlack(
-    project.slackWebhookUrl,
+  await avisarProyecto(
+    project,
     `Nueva petición de material en *${project.name}* (de ${staff.name}): ${description}`
   );
 
@@ -60,8 +60,8 @@ export async function toggleRequestStatusAction(formData: FormData) {
   });
 
   if (nextStatus === "entregado") {
-    await notifySlack(
-      project.slackWebhookUrl,
+    await avisarProyecto(
+      project,
       `Material entregado en *${project.name}*: ${request.description}`
     );
   }

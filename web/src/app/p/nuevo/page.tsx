@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/access";
 import { logoutAction } from "@/app/actions";
 import { createProjectAction } from "./actions";
-import { CLAVES_MARCA, MARCAS } from "@/lib/marcas";
+import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
 
 const ERROR_MESSAGES: Record<string, string> = {
   faltan_campos: "Faltan campos obligatorios (código, cliente, nombre).",
@@ -57,11 +57,11 @@ export default async function NuevoProyectoPage({
           <form action={createProjectAction} className="alta">
             <div className="fgrid">
               <div className="field">
-                <label htmlFor="brand">Productora</label>
-                <select id="brand" name="brand" defaultValue="JAKIENS" required>
-                  {CLAVES_MARCA.map((k) => (
+                <label htmlFor="productora">Productora</label>
+                <select id="productora" name="productora" defaultValue="JAKIENS" required>
+                  {CLAVES_PRODUCTORA.map((k) => (
                     <option key={k} value={k}>
-                      {MARCAS[k].nombre} · {MARCAS[k].descripcion}
+                      {PRODUCTORAS[k].nombre} · {PRODUCTORAS[k].descripcion}
                     </option>
                   ))}
                 </select>

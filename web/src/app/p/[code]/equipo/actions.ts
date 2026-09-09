@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireStaffAccess } from "@/lib/access";
 import { getOrCreateActiveToken } from "@/lib/tokens";
 import { buildWaLink, buildWaMessage } from "@/lib/wa";
-import { notifySlack } from "@/lib/slack";
+import { avisarProyecto, notifySlack } from "@/lib/slack";
 
 const ALL_PERMISOS = ["Briefing", "Materiales", "Rodaje", "Cierre"];
 
@@ -67,8 +67,8 @@ export async function addMemberAction(formData: FormData) {
     },
   });
 
-  await notifySlack(
-    project.slackWebhookUrl,
+  await avisarProyecto(
+    project,
     `Nuevo colaborador añadido a *${project.name}*: ${personName} (${role}).`
   );
 
@@ -93,8 +93,8 @@ export async function toggleConfirmedAction(formData: FormData) {
   });
 
   if (nowConfirmed) {
-    await notifySlack(
-      project.slackWebhookUrl,
+    await avisarProyecto(
+      project,
       `${member.person.name} (${member.role}) ha confirmado su participación en *${project.name}*.`
     );
   }
@@ -123,8 +123,8 @@ export async function convocarAction(formData: FormData) {
     ficha
   );
 
-  await notifySlack(
-    project.slackWebhookUrl,
+  await avisarProyecto(
+    project,
     `Convocatoria de WhatsApp enviada a ${member.person.name} (${member.role}) en *${project.name}*.`
   );
 

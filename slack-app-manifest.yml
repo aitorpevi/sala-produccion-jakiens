@@ -1,0 +1,36 @@
+# Manifiesto de la app de Slack de la Sala de Producción.
+#
+# Cómo usarlo: https://api.slack.com/apps → Create New App → From a manifest →
+# elegir el workspace → pegar este contenido → Create → Install to Workspace.
+# Slack devuelve un "Bot User OAuth Token" (`xoxb-...`) que va a Vercel como
+# SLACK_BOT_TOKEN.
+#
+# Para qué es cada permiso:
+#   channels:manage   crear el canal del proyecto y meter gente en él
+#   chat:write        publicar los avisos en el canal y los DM
+#   users:read        leer el directorio del workspace
+#   users:read.email  encontrar a cada persona por su correo @jakiens.com
+#
+# Nada más. No hay socket mode, ni comandos, ni eventos entrantes: la app solo
+# habla hacia Slack, nunca escucha. Menos superficie y nada que exponer.
+display_information:
+  name: Sala de Producción
+  description: Abre el canal de cada proyecto y avisa al equipo del trabajo asignado
+  background_color: "#111111"
+features:
+  bot_user:
+    display_name: Sala de Producción
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:manage
+      - chat:write
+      - users:read
+      - users:read.email
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+  interactivity:
+    is_enabled: false
