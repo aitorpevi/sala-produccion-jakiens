@@ -19,13 +19,33 @@ const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
-/** Cuenta filas sin que Prisma exija que el modelo exista en el esquema actual. */
+/**
+ * Cuenta filas sin que Prisma exija que el modelo exista en el esquema actual.
+ *
+ * Distingue "la tabla no está" de "no he podido conectar", y eso no es un
+ * detalle: la primera versión se tragaba los dos casos por igual y daba
+ * "BASE VACÍA" cuando en realidad no había llegado a hablar con nadie. Un aviso
+ * falso en la herramienta que existe precisamente para evitar un desastre es
+ * peor que no tenerla, porque la próxima vez nadie se lo cree.
+ */
 async function contar(tabla: string): Promise<number | null> {
   try {
     const r = await db.$queryRawUnsafe<{ n: bigint }[]>(`SELECT COUNT(*)::bigint AS n FROM "${tabla}"`);
     return Number(r[0].n);
-  } catch {
-    return null; // la tabla todavía no existe en esa base
+  } catch (e) {
+    const texto = e instanceof Error ? `${e.message}` : String(e);
+    // 42P01 es el código de Postgres para "esa tabla no existe". Cualquier otra
+    // cosa —red, credenciales, permisos— no se interpreta: se aborta.
+    const noExiste = /42P01|does not exist|no existe/i.test(texto);
+    if (noExiste) return null;
+
+    console.error(`\nNO SE HA PODIDO CONSULTAR "${tabla}".\n`);
+    console.error(texto.split("\n").slice(0, 3).join("\n"));
+    console.error(
+      "\nEsto NO significa que la base esté vacía: significa que no se ha podido\n" +
+        "hablar con ella. No saques ninguna conclusión de aquí ni migres nada.",
+    );
+    process.exit(1);
   }
 }
 

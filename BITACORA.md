@@ -44,6 +44,14 @@ historial, ni por ningún sitio donde quede escrito.
 estuvo sirviendo el código antiguo contra el esquema nuevo. No se sabe cuánto
 duró, porque el aviso de que estaba hecho llegó después.
 
+**Coletazo**: la comprobación que se quedó colgada terminó al rato y dictaminó
+**"BASE VACÍA"** — falso. `contar()` se tragaba por igual "esa tabla no existe" y
+"no he podido conectar", así que una conexión que nunca llegó a establecerse se
+leía como una base sin nada dentro. Corregido: ahora solo interpreta el código
+42P01 de Postgres y ante cualquier otro error aborta diciendo que no se puede
+concluir nada. Un aviso falso en la herramienta que existe para evitar un
+desastre es peor que no tenerla, porque a la siguiente nadie se la cree.
+
 **Pendiente:**
 
 - Borrar `web/.env.produccion` del portátil: lleva una credencial viva.
