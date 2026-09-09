@@ -56,6 +56,12 @@ El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
   su origen (`scripts/importar-hitos.ts`) y no se edita a mano, porque si el
   producer cambia una jornada en la orden de rodaje el calendario tiene que
   seguirla sola.
+- **Un hito se puede dar por hecho** (`Hito.completadoEn`, con quién y cuándo).
+  De ahí depende que el rojo signifique algo: una fecha pasada **y pendiente** es
+  un retraso real; una pasada y hecha ya no pide nada. Sin este campo la app no
+  podía distinguir "pasó" de "se entregó", así que pintaba todo lo pasado en gris
+  para no inventarse una alarma. El tablero enseña el primer hito **pendiente**,
+  y "al día" cuando no queda ninguno.
 - **Etapa y estado.** `Project.etapa` (`src/lib/etapas.ts`) es el eje de negocio;
   `Project.estado` dice si sigue vivo. Un proyecto PERDIDO se archiva y se
   consulta, no se borra. `PhaseState` no sirve para deducir la etapa: se escribe

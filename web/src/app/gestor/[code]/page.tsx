@@ -17,6 +17,7 @@ import {
   desasignarAction,
   guardarPresupuestoVentaAction,
   marcarCerradoAction,
+  marcarHitoAction,
   marcarPerdidoAction,
   moverEtapaAction,
   reabrirAction,
@@ -47,7 +48,7 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
     where: { code },
     include: {
       cliente: true,
-      hitos: { orderBy: { fecha: "asc" } },
+      hitos: { orderBy: { fecha: "asc" }, include: { completadoPor: true } },
       asignaciones: { include: { staff: true }, orderBy: [{ responsable: "desc" }, { creadoEn: "asc" }] },
       documentos: { orderBy: { creadoEn: "desc" } },
       // El presupuesto de venta ni siquiera se consulta si quien mira no tiene
@@ -199,7 +200,8 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
           <div className="phdr">
             <h3>Fechas</h3>
             <span className="tag">
-              {project.hitos.length} {project.hitos.length === 1 ? "hito" : "hitos"}
+              {project.hitos.filter((h) => !h.completadoEn).length} pendientes de{" "}
+              {project.hitos.length}
             </span>
           </div>
 
@@ -212,8 +214,8 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
             </div>
           ) : (
             project.hitos.map((h) => (
-              <div className="file" key={h.id}>
-                <span className={`hito-fecha u-${urgencia(h.fecha, hoy)}`}>
+              <div className={`file${h.completadoEn ? " hecho" : ""}`} key={h.id}>
+                <span className={`hito-fecha u-${urgencia(h.fecha, hoy, h.completadoEn)}`}>
                   {etiquetaFecha(h.fecha, h.fechaFin)}
                 </span>
                 <div className="fmeta">
@@ -221,8 +223,23 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
                   <div className="fd">
                     {TIPOS_HITO[h.tipo].label} · {etapaDe(h.etapa).label}
                     {h.origen !== "manual" ? " · derivado" : ""}
+                    {h.completadoEn
+                      ? ` · hecho el ${etiquetaFecha(h.completadoEn)}${
+                          h.completadoPor ? ` por ${h.completadoPor.name}` : ""
+                        }`
+                      : ""}
                   </div>
                 </div>
+
+                <form action={marcarHitoAction}>
+                  <input type="hidden" name="code" value={project.code} />
+                  <input type="hidden" name="id" value={h.id} />
+                  <input type="hidden" name="hecho" value={h.completadoEn ? "0" : "1"} />
+                  <button className={h.completadoEn ? "btn ghost" : "btn"} type="submit">
+                    {h.completadoEn ? "Deshacer" : "Hecho"}
+                  </button>
+                </form>
+
                 {h.origen === "manual" ? (
                   <form action={borrarHitoAction}>
                     <input type="hidden" name="code" value={project.code} />

@@ -42,7 +42,8 @@ model StaffUser {
   accesoPresupuestoVenta Boolean @default(false)
   createdAt    DateTime  @default(now())
 
-  hitos                    Hito[]
+  hitos                    Hito[] @relation("hitoResponsable")
+  hitosCompletados         Hito[] @relation("hitoCompletadoPor")
   asignaciones             AsignacionEtapa[]
   presupuestosActualizados PresupuestoVenta[] @relation("actualizadoPor")
   presupuestosAsignados    PresupuestoVenta[] @relation("asignadoA")
@@ -274,7 +275,23 @@ model Hito {
   /// Quién responde de esta fecha. Es del equipo interno: los hitos los mueve
   /// quien lidera la etapa, no el colaborador que ejecuta.
   responsableId String?
-  responsable   StaffUser? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  responsable   StaffUser? @relation("hitoResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  /**
+   * Cuándo se dio por hecho. `null` significa pendiente.
+   *
+   * Se guarda la fecha y no un `Boolean` porque la pregunta que se acaba
+   * haciendo no es "¿está hecho?" sino "¿cuándo se entregó?" — y un booleano no
+   * la responde nunca más.
+   *
+   * Sin esto, la aplicación no podía distinguir una fecha que pasó de una
+   * entrega que se hizo, y por eso una fecha vencida se pintaba en gris: decir
+   * "vas tarde" sin saberlo habría sido inventarse una alarma. Con esto, un
+   * hito pendiente cuya fecha ya pasó SÍ va en rojo, porque ahora consta.
+   */
+  completadoEn    DateTime?
+  completadoPorId String?
+  completadoPor   StaffUser? @relation("hitoCompletadoPor", fields: [completadoPorId], references: [id], onDelete: SetNull)
 
   /**
    * De dónde sale el hito. Los derivados no se editan a mano: se regeneran

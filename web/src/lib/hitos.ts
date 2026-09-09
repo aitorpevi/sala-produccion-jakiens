@@ -45,9 +45,14 @@ export function bloqueaJornada(tipo: TipoHito) {
  * con el tiempo; la urgencia dice cuánto queda y cambia sola cada día. Si las
  * mezclas en un solo color, no puedes ver las dos a la vez.
  */
-export type Urgencia = "vencido" | "inminente" | "proximo" | "lejano";
+export type Urgencia = "hecho" | "vencido" | "inminente" | "proximo" | "lejano";
 
-export function urgencia(fecha: Date, hoy: Date): Urgencia {
+export function urgencia(fecha: Date, hoy: Date, completadoEn?: Date | null): Urgencia {
+  // Un hito hecho deja de correr, aunque su fecha ya haya pasado. Antes esto no
+  // se podía saber, y por eso una fecha pasada se pintaba en gris: no constaba
+  // si se había entregado o se había ido. Ahora consta, y el rojo significa
+  // algo.
+  if (completadoEn) return "hecho";
   const dias = diasEntre(hoy, fecha);
   if (dias < 0) return "vencido";
   if (dias <= 2) return "inminente";

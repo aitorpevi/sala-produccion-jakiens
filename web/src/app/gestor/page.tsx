@@ -16,23 +16,31 @@ const iniciales = (nombre: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-type HitoMinimo = { fecha: Date; fechaFin: Date | null; titulo: string };
+type HitoMinimo = { fecha: Date; fechaFin: Date | null; titulo: string; completadoEn: Date | null };
 
 /**
- * Qué fecha enseña la pastilla: la próxima que venga, y si no queda ninguna, la
- * última que hubo.
+ * Qué fecha enseña la pastilla: la primera que quede PENDIENTE.
  *
- * Enseñar solo las futuras dejaba en "sin fecha" a los proyectos con todo el
- * calendario ya pasado, que son precisamente los que hay que mirar. La pasada se
- * marca como tal y en tono apagado, no en rojo: los hitos no tienen estado de
- * "hecho", así que la app no sabe si esa entrega se cumplió o se le fue, y
- * pintarla de alarma sería afirmar algo que no consta.
+ * Tuvo dos vidas anteriores y las dos eran peores. Primero enseñaba solo fechas
+ * futuras, y un proyecto con todo el calendario pasado decía "sin fecha", que es
+ * mentira y justo al revés de lo que importa. Luego enseñaba la última pasada en
+ * gris, porque sin estado de "hecho" la app no podía saber si esa entrega se
+ * cumplió o se le fue, y pintar una alarma sin saberlo habría sido inventarla.
+ *
+ * Ahora consta. Una fecha pendiente que ya pasó va en rojo y el rojo significa
+ * algo; un proyecto con todo hecho dice "al día", que también es una respuesta.
  */
-function fechaAEnsenar(hitos: HitoMinimo[], hoy: Date) {
-  if (hitos.length === 0) return null;
-  const proximo = hitos.find((h) => (h.fechaFin ?? h.fecha) >= hoy);
-  if (proximo) return { hito: proximo, pasada: false };
-  return { hito: hitos[hitos.length - 1], pasada: true };
+function fechaAEnsenar(hitos: HitoMinimo[]) {
+  // Solo cuentan los que siguen pendientes: uno hecho ya no pide nada, aunque
+  // su fecha esté por delante. Lo que interesa saber al mirar el tablero es qué
+  // queda por hacer, no qué hay apuntado.
+  const pendientes = hitos.filter((h) => !h.completadoEn);
+  if (pendientes.length === 0) {
+    return hitos.length > 0 ? { hito: null, pasada: false, alDia: true } : null;
+  }
+  // El primero pendiente por fecha. Si esa fecha ya pasó, va en rojo — y ahora
+  // el rojo significa algo, porque consta que no se ha entregado.
+  return { hito: pendientes[0], pasada: false, alDia: false };
 }
 
 /**
@@ -184,7 +192,7 @@ export default async function GestorPage({
               ) : (
                 <div className="pastillas">
                   {enEtapa.map((p) => {
-                    const fecha = fechaAEnsenar(p.hitos, hoy);
+                    const fecha = fechaAEnsenar(p.hitos);
                     const gente = p.asignaciones.filter((a) => a.etapa === p.etapa);
                     const productora = PRODUCTORAS[(p.productora ?? "JAKIENS") as keyof typeof PRODUCTORAS] ?? PRODUCTORAS.JAKIENS;
 
@@ -205,15 +213,12 @@ export default async function GestorPage({
                             alt={productora.nombre}
                             height={12}
                           />
-                          {fecha ? (
-                            <span
-                              className={`hito-proximo u-${
-                                fecha.pasada ? "pasada" : urgencia(fecha.hito.fecha, hoy)
-                              }`}
-                            >
-                              {fecha.pasada ? "última · " : ""}
+                          {fecha?.hito ? (
+                            <span className={`hito-proximo u-${urgencia(fecha.hito.fecha, hoy)}`}>
                               {etiquetaFecha(fecha.hito.fecha, fecha.hito.fechaFin)}
                             </span>
+                          ) : fecha?.alDia ? (
+                            <span className="hito-proximo u-hecho">Al día</span>
                           ) : (
                             <span className="hito-proximo u-vacio">Sin fecha</span>
                           )}
@@ -228,7 +233,7 @@ export default async function GestorPage({
                             : ""}
                         </div>
 
-                        {fecha ? <div className="p-hito">{fecha.hito.titulo}</div> : null}
+                        {fecha?.hito ? <div className="p-hito">{fecha.hito.titulo}</div> : null}
 
                         {gente.length > 0 ? (
                           <div className="p-gente">

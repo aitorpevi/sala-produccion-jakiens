@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireStaff } from "@/lib/access";
+import { requireStaff, puedeVerProyecto } from "@/lib/access";
 import { CLAVES_ETAPA } from "@/lib/etapas";
 import { fechaDesdeInput } from "@/lib/hitos";
 import type { Etapa, TipoHito } from "@/generated/prisma/enums";
 import { TIPOS_HITO } from "@/lib/hitos";
 import { ESTADOS_PRESUPUESTO_VENTA } from "@/lib/presupuesto-venta";
-import { haySlackApi, prepararCanalDeProyecto } from "@/lib/slack";
+import { avisarProyecto, haySlackApi, prepararCanalDeProyecto } from "@/lib/slack";
 import { guardarArchivo } from "@/lib/storage";
 import { avisar } from "@/lib/avisos";
 
@@ -389,5 +389,45 @@ export async function anadirBriefingAction(formData: FormData) {
       },
     });
   }
+  revalidatePath(`/gestor/${code}`);
+}
+
+/**
+ * Da un hito por hecho, o lo deshace.
+ *
+ * Lo puede tocar cualquier nivel, igual que crear fechas: quien entrega es quien
+ * sabe que ha entregado, y hacerle pedir permiso para marcarlo garantiza que no
+ * lo marque nadie y que el dato no valga nada.
+ *
+ * Se guarda quién y cuándo. El "cuándo" no es el día que tocaba, es el día que
+ * se hizo: son cosas distintas y la diferencia entre las dos es justo lo que se
+ * querrá mirar dentro de seis meses.
+ */
+export async function marcarHitoAction(formData: FormData) {
+  const staff = await requireStaff();
+  const code = String(formData.get("code") ?? "");
+  const id = String(formData.get("id") ?? "");
+  const hecho = formData.get("hecho") === "1";
+
+  const hito = await db.hito.findUnique({ where: { id }, include: { project: true } });
+  if (!hito) return;
+  if (!(await puedeVerProyecto(staff, hito.projectId))) return;
+
+  await db.hito.update({
+    where: { id },
+    data: hecho
+      ? { completadoEn: new Date(), completadoPorId: staff.id }
+      : { completadoEn: null, completadoPorId: null },
+  });
+
+  // Solo se avisa al completar, no al deshacer: deshacer suele ser corregir un
+  // clic, y avisar de cada corrección enseña a la gente a ignorar los avisos.
+  if (hecho) {
+    await avisarProyecto(
+      hito.project,
+      `${staff.name} ha dado por hecho «${hito.titulo}» en *${hito.project.name}*.`,
+    );
+  }
+
   revalidatePath(`/gestor/${code}`);
 }

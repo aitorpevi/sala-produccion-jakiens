@@ -458,3 +458,10 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .aviso-archivo{
   font-size:12px;line-height:1.4;color:#8a1f1f;border-left:2px solid #8a1f1f;
   padding-left:9px;margin-top:4px}
+
+/* Hito hecho. Se apaga, pero no se esconde: sigue contando lo que ya se
+   entregó, que es la mitad de la historia de un proyecto. */
+.file.hecho .fn{color:var(--smoke);text-decoration:line-through;text-decoration-thickness:1px}
+.hito-fecha.u-hecho,.hito-proximo.u-hecho{
+  border-color:var(--hair);color:var(--mist);text-decoration:line-through}
+.hito-proximo.u-hecho{text-decoration:none;border-style:solid}

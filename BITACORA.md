@@ -9,6 +9,47 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-09 · MacBook · Los hitos se pueden dar por hechos
+
+Era lo que bloqueaba el calendario, y salió de un fallo de diseño detectado el
+día 7: el tablero no podía distinguir *"esa fecha pasó"* de *"eso se entregó"*,
+así que pintaba en gris todo lo vencido para no inventarse una alarma.
+
+`Hito.completadoEn` + `completadoPorId` (migración `20260909170000_hito_completado`,
+dos columnas opcionales). **Fecha y no booleano**: la pregunta que se acaba
+haciendo no es "¿está hecho?" sino "¿cuándo se entregó?", y un booleano no la
+responde nunca más. Los hitos existentes quedan pendientes, que es lo correcto:
+de ellos no consta que se entregaran.
+
+**Lo que cambia de verdad es la lectura del tablero:**
+
+- `urgencia()` acepta `completadoEn`. Un hito hecho deja de correr aunque su
+  fecha haya pasado.
+- La pastilla enseña el primer hito **pendiente**, no el primero a secas. Y si
+  no queda ninguno, dice **"al día"**, que también es una respuesta.
+- **El rojo ya significa algo**: una fecha pasada y pendiente es un retraso real.
+  Verificado en el tablero: "Campaña Navidad 2026" (05 SEP) y "Fibra Para Todos"
+  (03–04 SEP) salen en rojo; los demás no.
+- La ficha lleva "Hecho" / "Deshacer" en cada fecha, muestra quién y cuándo, y
+  el contador pasa a "2 pendientes de 3".
+
+Marcar hecho avisa al canal de Slack del proyecto; deshacer **no**, porque
+deshacer suele ser corregir un clic y avisar de cada corrección enseña a la
+gente a ignorar los avisos.
+
+Lo puede marcar cualquier nivel: quien entrega es quien sabe que ha entregado, y
+hacerle pedir permiso garantiza que no lo marque nadie y que el dato no valga
+nada.
+
+**Verificado en local** con la demo: marcar la PPM de DEMO-PREPRO baja el
+contador y la pastilla salta a la siguiente fecha pendiente.
+
+**Nota de proceso**: se aplicó mientras Aitor tenía la demo abierta en local. El
+servidor necesitó reinicio porque llevaba cacheado el cliente de Prisma anterior
+— con un cambio de esquema no basta la recarga en caliente.
+
+---
+
 ## 2026-09-09 · MacBook · El alta de oportunidad se rompía al adjuntar un archivo
 
 **Causa, del log de Vercel**: `FUNCTION_PAYLOAD_TOO_LARGE`, un 413 en
