@@ -452,3 +452,9 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 /* Logo de la productora en la pastilla. Alto fijo y ancho automático: los dos
    son wordmarks con proporciones muy distintas (Jakiens 4:1, Ricorico 5:1). */
 .p-logo{height:12px;width:auto;display:block;flex:none}
+
+/* Aviso cuando un archivo no cabe. Rojo pero sin gritar: es una instrucción,
+   no una alarma. */
+.aviso-archivo{
+  font-size:12px;line-height:1.4;color:#8a1f1f;border-left:2px solid #8a1f1f;
+  padding-left:9px;margin-top:4px}

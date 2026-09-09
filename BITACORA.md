@@ -9,6 +9,53 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-09 · MacBook · El alta de oportunidad se rompía al adjuntar un archivo
+
+**Causa, del log de Vercel**: `FUNCTION_PAYLOAD_TOO_LARGE`, un 413 en
+`/gestor/nueva`. Las acciones de servidor de Next traen **1 MB** de límite de
+cuerpo por defecto y Vercel corta en **4,5 MB** a nivel de plataforma. Al
+adjuntar un briefing, la petición se rechazaba **antes de llegar al código**, así
+que no había forma de dar un error decente ni quedaba rastro en la aplicación.
+
+Por eso no se reproducía: en local no hay límite de plataforma, y probé siempre
+sin adjuntar archivo. La lección es que **una subida de archivos dentro de una
+acción de servidor tiene un techo bajo**, y eso hay que saberlo al diseñarla, no
+descubrirlo en producción.
+
+**Arreglo en dos partes:**
+
+1. `bodySizeLimit: "4mb"` en `next.config.ts`. No más: por encima de 4,5 MB
+   manda Vercel y ahí no pintamos nada.
+2. `ArchivoLimitado`, un selector de archivo que comprueba el tamaño **en el
+   navegador** y, si no cabe, lo dice y sugiere pegar el enlace. Convierte una
+   pantalla rota sin explicación en una frase que dice qué hacer. Y lo que
+   sugiere es además lo mejor: un brief en Drive o Canva sigue cambiando, y una
+   copia subida se queda congelada.
+
+Usado en los tres sitios donde se sube algo: briefing del alta, briefing de la
+ficha y PDF del presupuesto.
+
+**Verificado**: un archivo de 6 MB se rechaza en el navegador con el aviso y el
+campo se vacía, así que no llega a enviarse.
+
+**Pendiente de verdad**: para archivos grandes la solución no es subir el límite,
+es que el archivo **no pase por la función** — subida directa del navegador a
+Vercel Blob. `Material`, en la sala de producción, tiene exactamente el mismo
+techo y no se ha tocado: un dossier de arte de 12 MB fallará igual.
+
+**De paso**: el alta de oportunidad queda envuelta en un `try/catch` que marca
+los fallos con `[oportunidad]` en el log. Buscar eso en Vercel es ahora
+instantáneo. Ojo al hacerlo: `redirect()` de Next funciona lanzando, así que hay
+que dejar pasar los errores cuyo `digest` empieza por `NEXT_`.
+
+**Y `scripts/demo.ts`**: cinco proyectos de ejemplo, uno por etapa, con equipo,
+fechas, briefing y presupuesto. Todos con código `DEMO-` para distinguirlos y
+poder borrarlos de golpe con `--borrar --aplicar`. Se hacen por script y no a
+mano porque lo que se enseña en una reunión hay que poder quitarlo entero
+después, y a mano siempre queda algo.
+
+---
+
 ## 2026-09-09 · MacBook · Pantalla de permisos (fallo encontrado en producción)
 
 Aitor probó la app desplegada y el desplegable de **"prepara el presupuesto"

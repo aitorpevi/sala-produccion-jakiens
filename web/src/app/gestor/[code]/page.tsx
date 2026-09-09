@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireStaff, puedeVerProyecto } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
+import { ArchivoLimitado } from "@/components/ArchivoLimitado";
 import { ETAPAS, ESTADOS, etapa as etapaDe, ordenEtapa } from "@/lib/etapas";
 import { TIPOS_HITO, etiquetaFecha, urgencia } from "@/lib/hitos";
 import { PRODUCTORAS } from "@/lib/productoras";
@@ -330,7 +331,7 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
             <div className="fgrid">
               <div className="field">
                 <label htmlFor="archivo-brief">Documento</label>
-                <input id="archivo-brief" name="archivo" type="file" />
+                <ArchivoLimitado id="archivo-brief" name="archivo" />
               </div>
               <div className="field">
                 <label htmlFor="linkUrl">O enlace</label>
@@ -481,7 +482,7 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
               <div className="fgrid">
                 <div className="field">
                   <label htmlFor="archivo-ppto">Subir PPTO (PDF)</label>
-                  <input id="archivo-ppto" name="archivo" type="file" accept=".pdf" />
+                  <ArchivoLimitado id="archivo-ppto" name="archivo" accept=".pdf" />
                   <span className="ayuda">
                     El nombre del archivo pasa a ser el identificador del proyecto.
                   </span>

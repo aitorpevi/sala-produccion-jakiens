@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/access";
 import { TopBar } from "@/components/AppShell";
 import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
+import { ArchivoLimitado } from "@/components/ArchivoLimitado";
 import { crearOportunidadAction } from "./actions";
 
 const ERRORES: Record<string, string> = {
@@ -141,10 +142,9 @@ export default async function NuevaOportunidadPage({
               <div className="fgrid">
                 <div className="field">
                   <label htmlFor="briefingArchivo">Documento</label>
-                  <input
+                  <ArchivoLimitado
                     id="briefingArchivo"
                     name="briefingArchivo"
-                    type="file"
                     accept=".pdf,.doc,.docx,.ppt,.pptx,.key,.zip"
                   />
                 </div>

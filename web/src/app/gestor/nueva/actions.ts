@@ -24,6 +24,22 @@ import { avisar } from "@/lib/avisos";
  *   quién está libre y repartir al abrir la oportunidad, no después.
  */
 export async function crearOportunidadAction(formData: FormData) {
+  try {
+    return await crearOportunidad(formData);
+  } catch (e) {
+    // `redirect()` de Next funciona lanzando: hay que dejarlo pasar o el alta
+    // se queda a medias sin ir a ninguna parte.
+    if (e && typeof e === "object" && "digest" in e && String(e.digest).startsWith("NEXT_")) throw e;
+
+    // Cualquier otro fallo se marca para poder encontrarlo en el log de Vercel
+    // buscando "[oportunidad]". Sin esto, el error aparece como una traza suelta
+    // entre cientos de líneas y hay que adivinar de dónde salió.
+    console.error("[oportunidad] fallo al crear:", e);
+    throw e;
+  }
+}
+
+async function crearOportunidad(formData: FormData) {
   const staff = await requireStaff();
   // Quien vuelca las oportunidades es el equipo de venta —Javier y Aitor—, que
   // están en el nivel FULL. Carmen deriva el trabajo, pero no origina la ficha.
