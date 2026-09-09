@@ -9,6 +9,53 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-09 · MacBook · Desplegado en producción
+
+**Está en producción.** `main` fusionado (12 commits), Vercel desplegado, y las
+21 migraciones aplicadas sobre la base real. `/p` ya redirige a `/gestor`, y
+ninguna ruta devuelve error.
+
+**Cómo se hizo la migración**, porque costó tres intentos y conviene que quede:
+
+1. El `DATABASE_URL` de Vercel está marcado como **sensible**: es de solo
+   escritura y **no hay forma de leerlo**, ni por la web ni por la CLI. No se
+   puede recuperar de ahí.
+2. La solución fue sacar una **credencial nueva desde la consola de Prisma**,
+   que es donde vive de verdad la base. Crear una nueva no invalida la de
+   Vercel.
+3. Prisma Postgres entrega **dos cadenas distintas y no intercambiables**:
+   `prisma+postgres://` (proxy HTTP, la que entienden las herramientas `prisma`)
+   y `postgres://` (conexión directa, la que necesita cualquier script propio).
+
+**Ese punto 3 es la razón de que no hubiera copia de seguridad.** El script de
+respaldo usa `@prisma/adapter-pg`, que abre un socket TCP, y con la cadena del
+proxy se queda colgado en silencio hasta agotar el tiempo de espera — cinco
+minutos mirando una terminal parada. Se migró **sin copia**. Salió bien, pero no
+debería haber salido así. Los dos scripts (`copia-seguridad.ts` y
+`comprobar-base.ts`) ahora se niegan de entrada y explican cuál hace falta.
+
+**Incidente de seguridad**: en el proceso, una cadena de conexión con su clave
+acabó pegada en el chat. Se revocó y se generó otra. La causa de raíz fue el
+método que propuse, que obligaba a manejar el valor a mano; ahora el paso lee
+del portapapeles con `pbpaste` y el valor no pasa por la terminal, ni por el
+historial, ni por ningún sitio donde quede escrito.
+
+**Ventana de caída**: entre que se aplicaron las migraciones y la fusión, la app
+estuvo sirviendo el código antiguo contra el esquema nuevo. No se sabe cuánto
+duró, porque el aviso de que estaba hecho llegó después.
+
+**Pendiente:**
+
+- Borrar `web/.env.produccion` del portátil: lleva una credencial viva.
+- Comprobar en producción con una cuenta real que el tablero pinta bien.
+- El token de Slack está en Vercel pero **sin probar contra Slack de verdad**.
+  Se verá en el próximo GO.
+- Los hitos siguen sin estado de "completado".
+- Vercel está en plan **Hobby**, cuyas condiciones son de uso personal y no
+  comercial.
+
+---
+
 ## 2026-09-07 · MacBook · Ficha de venta, clientes, avisos y externos
 
 Resto del feedback de las pantallas del gestor.

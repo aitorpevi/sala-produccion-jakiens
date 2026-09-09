@@ -36,11 +36,38 @@ const TABLAS = [
   "accesoDatosPersonales", "senal", "temaSeguido", "pasadaIngesta",
 ] as const;
 
-async function main() {
-  if (!process.env.DATABASE_URL) {
-    console.error("Falta DATABASE_URL. Usa --env-file=.env.produccion");
+/**
+ * Prisma Postgres entrega dos cadenas distintas y NO son intercambiables:
+ *
+ *   prisma+postgres://accelerate.prisma-data.net/?api_key=...   proxy HTTP
+ *   postgres://usuario:clave@host:5432/base                     Postgres directo
+ *
+ * Las herramientas `prisma` entienden las dos. Este script no: usa el driver de
+ * Postgres (`@prisma/adapter-pg`), que abre un socket TCP y con la primera se
+ * queda colgado sin decir nada hasta agotar el tiempo de espera. Mejor negarse
+ * de entrada que dejar a alguien mirando una terminal parada cinco minutos —
+ * que es exactamente lo que pasó el 2026-09-09, y por eso no hubo copia.
+ */
+function exigirConexionDirecta() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error("Falta DATABASE_URL.");
     process.exit(1);
   }
+  if (url.startsWith("prisma+postgres://")) {
+    console.error(
+      "Esta cadena es la del proxy de Prisma (prisma+postgres://) y este script\n" +
+        "necesita una conexión directa (postgres://).\n\n" +
+        "En la consola de Prisma, en la misma pantalla donde sacaste esta, hay una\n" +
+        "cadena de conexión DIRECTA — la que sirve para psql y para herramientas\n" +
+        "externas. Usa esa.",
+    );
+    process.exit(1);
+  }
+}
+
+async function main() {
+  exigirConexionDirecta();
 
   const salida: Record<string, unknown[]> = {};
   let total = 0;
