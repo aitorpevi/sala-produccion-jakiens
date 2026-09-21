@@ -7,6 +7,7 @@ import { ArchivoLimitado } from "@/components/ArchivoLimitado";
 import { ETAPAS, ESTADOS, etapa as etapaDe, ordenEtapa } from "@/lib/etapas";
 import { TIPOS_HITO, etiquetaFecha, urgencia } from "@/lib/hitos";
 import { PRODUCTORAS } from "@/lib/productoras";
+import { fasesDeEtapa, primeraFaseDeEtapa, staffPhaseAllowed } from "@/lib/phases";
 import { ESTADOS_PRESUPUESTO_VENTA } from "@/lib/presupuesto-venta";
 import {
   anadirBriefingAction,
@@ -68,6 +69,12 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
   const puedeMover = staff.tier === "FULL";
   const archivado = project.estado === "PERDIDO" || project.estado === "CERRADO";
   const siguiente = ETAPAS[ordenEtapa(project.etapa) + 1];
+  // Las mesas de trabajo de la etapa en la que está AHORA, filtradas por lo que
+  // el nivel de quien mira le deja abrir. En venta no hay ninguna: antes del GO
+  // el proyecto se trabaja en esta misma ficha.
+  const mesas = enVenta
+    ? []
+    : fasesDeEtapa(project.etapa).filter((f) => staffPhaseAllowed(staff.tier, f.key));
 
   // El briefing lo ve el equipo; el presupuesto solo quien tiene permiso, y por
   // eso ni se ha traído de la base si no lo tiene.
@@ -163,37 +170,89 @@ export default async function FichaProyectoPage({ params }: { params: Promise<{ 
         </div>
       </section>
 
+      {/*
+        La tira de etapas es la NAVEGACIÓN del proyecto, no un adorno de estado.
+        Antes era un simple indicador, y como se pintaba igual que la tira de la
+        sala de producción —misma rejilla, mismos números grandes— cualquiera
+        pulsaba "03 Rodaje" esperando el orden del día y se quedaba en la misma
+        ficha. Ahora cada etapa lleva a su mesa de trabajo y dice debajo qué hay
+        dentro, que es la única forma de que se entienda sin explicarlo.
+      */}
       <nav className="etapas" aria-label="Etapas del proyecto">
         {ETAPAS.map((e) => {
           const pos = ordenEtapa(e.clave) - ordenEtapa(project.etapa);
           const estado = pos < 0 ? "pasada" : pos === 0 ? "actual" : "futura";
-          return (
+          // En venta todavía no hay sala que abrir, y una etapa cuyas fases no
+          // puede ver este nivel tampoco navega: un enlace a un 404 es peor que
+          // ningún enlace.
+          const destino = enVenta ? null : primeraFaseDeEtapa(e.clave, staff.tier);
+          // Cuando la etapa tiene una sola mesa que además se llama igual que
+          // ella, listar su nombre no dice nada: "03 Rodaje · Rodaje". En ese
+          // caso se enseña qué se hace dentro, que es lo que hacía falta saber.
+          const fases = fasesDeEtapa(e.clave);
+          const dentro =
+            e.clave === "VENTA"
+              ? "Briefing y propuesta"
+              : fases.length === 1
+                ? fases[0].que
+                : fases.map((f) => f.label).join(" · ");
+          const cuerpo = (
+            <>
+              <span className="etapa-punto" />
+              <span className="num">{e.n}</span>
+              <span className="plabel">{e.label}</span>
+              <span className="etapa-que">{dentro}</span>
+            </>
+          );
+
+          return destino ? (
+            <Link
+              className={`etapa-paso ${estado} navega`}
+              style={{ ["--etapa" as string]: e.color }}
+              href={`/p/${project.code}/${destino}`}
+              key={e.clave}
+            >
+              {cuerpo}
+            </Link>
+          ) : (
             <div
               className={`etapa-paso ${estado}`}
               style={{ ["--etapa" as string]: e.color }}
               key={e.clave}
             >
-              <span className="etapa-punto" />
-              <span className="num">{e.n}</span>
-              <span className="plabel">{e.label}</span>
+              {cuerpo}
             </div>
           );
         })}
       </nav>
 
       <main>
-        {!enVenta ? (
-          <div className="panel">
-            <div className="file">
-              <div className="fmeta">
-                <div className="fn">Sala de producción</div>
-                <div className="fd">Equipo, materiales, altas, orden de rodaje y cierre</div>
-              </div>
-              <Link className="btn solid" href={`/p/${project.code}/equipo`}>
-                Entrar
-              </Link>
+        {/*
+          La puerta a la sala de producción. Antes era una fila gris idéntica a
+          la de un documento adjunto, con un "Entrar" que no decía a dónde — y
+          pasaba desapercibida hasta para quien había construido la herramienta.
+          Ahora enseña las mesas de trabajo de la etapa actual, una por una y con
+          su descripción: se ve QUÉ hay detrás antes de pulsar.
+        */}
+        {mesas.length > 0 ? (
+          <section className="sala-puerta" style={{ ["--etapa" as string]: info.color }}>
+            <div className="sp-head">
+              <h3>Sala de producción</h3>
+              <span className="sp-etapa">{info.label}</span>
             </div>
-          </div>
+            <p className="sp-lead">
+              Aquí se opera el proyecto. Estas son las mesas de {info.label.toLowerCase()}; las
+              del resto de etapas se abren desde la tira de arriba.
+            </p>
+            <div className="mesas">
+              {mesas.map((f) => (
+                <Link className="mesa" key={f.key} href={`/p/${project.code}/${f.key}`}>
+                  <span className="mesa-label">{f.label}</span>
+                  <span className="mesa-que">{f.que}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         <div className="panel">

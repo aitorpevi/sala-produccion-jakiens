@@ -43,6 +43,36 @@ Es la distinción de diseño más importante del proyecto.
 La fase operativa es un desglose de las etapas post-GO, no una lista paralela.
 El gestor lee la etapa; la sala de producción sigue leyendo `PhaseState`.
 
+**Nunca se pintan igual.** Durante un tiempo las dos tiras de navegación eran el
+mismo componente con números distintos —01..05 las etapas, 01..07 las fases—, así
+que "03" significaba Rodaje en una pantalla y Materiales en la otra. El propio
+autor de la herramienta llegó a creer que la sala de producción había
+desaparecido. Desde el 21 de septiembre de 2026:
+
+- Cada fase declara su `etapa` en `PHASES`, y la sala **no lleva números**: lleva
+  el color y el nombre de la etapa a la que pertenece cada mesa. La etapa es el
+  único vocabulario compartido por las dos pantallas.
+- **La tira de etapas del gestor es navegación**, no un indicador: lleva a la
+  mesa de trabajo correspondiente (`primeraFaseDeEtapa`) y dice qué hay dentro.
+- Si añades una pantalla en cualquiera de los dos ejes, dile a qué etapa
+  pertenece antes de dibujarla.
+
+## El calendario
+
+`/gestor?vista=calendario` — un interruptor junto al filtro de productora, no una
+pantalla aparte. **No sustituye al tablero de etapas**: ese es el del equipo, y
+cambiarlo por el de dirección sería cambiar un problema por otro.
+
+Es una línea de tiempo (una fila por proyecto) y no una rejilla de mes, porque la
+pregunta es "qué hay en marcha y quién lo lleva", que se lee por filas. Sale
+entero de `Hito`: no hay calendario que sincronizar. La geometría está en
+`src/lib/calendario.ts`, en días UTC y porcentajes.
+
+Los choques de rodaje entre proyectos distintos se marcan con rayado además de
+color, y se avisa arriba. Es la razón de ser de la pantalla: el equipo de rodaje
+es en buena parte el mismo, así que dos rodajes solapados son un problema, no un
+dato de color.
+
 ## Decisiones vigentes
 
 - **Fechas.** Casi todas las fechas del modelo son `String?` (texto libre): se

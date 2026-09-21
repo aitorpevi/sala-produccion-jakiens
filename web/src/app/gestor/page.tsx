@@ -6,6 +6,15 @@ import { ETAPAS, ESTADOS, estaVivo, estaArchivado } from "@/lib/etapas";
 import { etiquetaFecha, urgencia } from "@/lib/hitos";
 import { CLAVES_PRODUCTORA, PRODUCTORAS } from "@/lib/productoras";
 import { IconoRadar } from "@/components/IconoRadar";
+import { CalendarioProyectos } from "@/components/CalendarioProyectos";
+import {
+  VENTANAS,
+  construirRango,
+  inicioDeMes,
+  mesAParam,
+  mesDesdeParam,
+  sumarMeses,
+} from "@/lib/calendario";
 
 /** "Chiara" → "CH". Dos letras: con once personas no hay colisiones que importen. */
 const iniciales = (nombre: string) =>
@@ -58,15 +67,50 @@ function fechaAEnsenar(hitos: HitoMinimo[]) {
 export default async function GestorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ productora?: string }>;
+  searchParams: Promise<{
+    productora?: string;
+    vista?: string;
+    meses?: string;
+    desde?: string;
+  }>;
 }) {
   const staff = await requireStaff();
   const hoy = new Date();
   // Al fusionar las dos pantallas se perdía la separación por productora, que
   // sí era útil: evita leer del tirón un rodaje de 40k y una pieza de social.
   // Vuelve como filtro en vez de como dos listas.
-  const { productora: filtro } = await searchParams;
+  const { productora: filtro, vista: vistaParam, meses: mesesParam, desde } = await searchParams;
   const filtroActivo = CLAVES_PRODUCTORA.includes(filtro as never) ? filtro : null;
+
+  /*
+    Dos maneras de mirar lo mismo.
+
+    "Etapas" es la vista del equipo: en qué punto está cada proyecto y quién lo
+    lleva. "Calendario" es la vista de dirección: todo lo que hay en marcha
+    puesto sobre el tiempo, que es donde se ven los choques de rodaje. No se
+    sustituye una por otra —quitarle al equipo su pantalla para dársela a
+    dirección sería cambiar un problema por otro—, y el interruptor cuesta un
+    parámetro en la URL. Quien solo quiera el calendario se guarda
+    /gestor?vista=calendario y no ve nada más.
+  */
+  const vista = vistaParam === "calendario" ? "calendario" : "etapas";
+  const meses = ([1, 2, 3] as const).find((m) => String(m) === mesesParam) ?? 3;
+  const desdeMes = mesDesdeParam(desde) ?? inicioDeMes(new Date());
+  const rango = construirRango(desdeMes, meses);
+
+  /** Conserva el resto de parámetros al cambiar uno: filtrar no debe sacarte del calendario. */
+  const href = (cambios: Record<string, string | null>) => {
+    const actual: Record<string, string | null> = {
+      productora: filtroActivo ?? null,
+      vista: vista === "calendario" ? "calendario" : null,
+      meses: meses === 3 ? null : String(meses),
+      desde: desde ?? null,
+    };
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...actual, ...cambios })) if (v) q.set(k, v);
+    const s = q.toString();
+    return s ? `/gestor?${s}` : "/gestor";
+  };
 
   const proyectos = await db.project.findMany({
     // Un producer externo solo ve los proyectos que lleva. Se filtra en la
@@ -144,22 +188,66 @@ export default async function GestorPage({
           </div>
         </div>
 
-        <nav className="filtros" aria-label="Filtrar por productora">
-          <Link className={`filtro${filtroActivo ? "" : " on"}`} href="/gestor">
-            Todo
-          </Link>
-          {CLAVES_PRODUCTORA.map((k) => (
-            <Link
-              key={k}
-              className={`filtro${filtroActivo === k ? " on" : ""}`}
-              href={`/gestor?productora=${k}`}
-              style={{ ["--etapa" as string]: PRODUCTORAS[k].color }}
-            >
-              <span className="etapa-punto" />
-              {PRODUCTORAS[k].nombre}
+        <div className="barra-vista">
+          <nav className="filtros" aria-label="Filtrar por productora">
+            <Link className={`filtro${filtroActivo ? "" : " on"}`} href={href({ productora: null })}>
+              Todo
             </Link>
-          ))}
-        </nav>
+            {CLAVES_PRODUCTORA.map((k) => (
+              <Link
+                key={k}
+                className={`filtro${filtroActivo === k ? " on" : ""}`}
+                href={href({ productora: k })}
+                style={{ ["--etapa" as string]: PRODUCTORAS[k].color }}
+              >
+                <span className="etapa-punto" />
+                {PRODUCTORAS[k].nombre}
+              </Link>
+            ))}
+          </nav>
+
+          <nav className="vistas" aria-label="Forma de ver los proyectos">
+            <Link
+              className={`vista${vista === "etapas" ? " on" : ""}`}
+              href={href({ vista: null })}
+            >
+              Etapas
+            </Link>
+            <Link
+              className={`vista${vista === "calendario" ? " on" : ""}`}
+              href={href({ vista: "calendario" })}
+            >
+              Calendario
+            </Link>
+          </nav>
+        </div>
+
+        {vista === "calendario" ? (
+          <div className="cal-mandos">
+            <div className="cal-nav">
+              <Link className="cal-paso" href={href({ desde: mesAParam(sumarMeses(desdeMes, -1)) })}>
+                ←
+              </Link>
+              <Link className="cal-hoy-btn" href={href({ desde: null })}>
+                Hoy
+              </Link>
+              <Link className="cal-paso" href={href({ desde: mesAParam(sumarMeses(desdeMes, 1)) })}>
+                →
+              </Link>
+            </div>
+            <nav className="ventanas" aria-label="Periodo">
+              {VENTANAS.map((v) => (
+                <Link
+                  key={v.meses}
+                  className={`ventana${meses === v.meses ? " on" : ""}`}
+                  href={href({ meses: v.meses === 3 ? null : String(v.meses) })}
+                >
+                  {v.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        ) : null}
 
         {vivos.length === 0 ? (
           <div className="panel">
@@ -172,7 +260,11 @@ export default async function GestorPage({
           </div>
         ) : null}
 
-        {ETAPAS.map((e) => {
+        {vista === "calendario" && vivos.length > 0 ? (
+          <CalendarioProyectos proyectos={vivos} rango={rango} hoy={hoy} />
+        ) : null}
+
+        {vista === "calendario" ? null : ETAPAS.map((e) => {
           const enEtapa = vivos.filter((p) => p.etapa === e.clave);
 
           return (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { StaffTier } from "@/generated/prisma/enums";
 import { PHASES, PHASE_STATE, STAFF_TIER_LABEL, type PhaseKey } from "@/lib/phases";
+import { etapa as etapaDe } from "@/lib/etapas";
 import { logoutAction, marcarAvisosLeidosAction } from "@/app/actions";
 import { avisosPendientes } from "@/lib/avisos";
 
@@ -46,6 +47,18 @@ export function AppShell({
           <span className="wordmark">Jakiens</span>
           <span className="sub">Sala de producción</span>
         </Link>
+        {/*
+          Volver a la ficha, solo para el equipo interno. Se deduce del
+          `basePath` en vez de pasarse como prop porque las vistas de
+          colaborador (`/f/[token]`) usan este mismo armazón y NO deben ver un
+          enlace al gestor: no tienen acceso y el enlace solo les daría un 404 y
+          la sensación de que se les esconde algo.
+        */}
+        {basePath.startsWith("/p/") ? (
+          <Link href={`/gestor/${project.code}`} className="volver-ficha">
+            ← Ficha del proyecto
+          </Link>
+        ) : null}
         <div className="viewer">{viewerLabel}</div>
       </header>
 
@@ -62,18 +75,44 @@ export function AppShell({
         </div>
       </section>
 
-      <nav className="phases" aria-label="Fases del proyecto">
+      {/*
+        Las mesas de trabajo, agrupadas bajo la etapa a la que pertenecen.
+        
+        Antes esta tira enseñaba números grandes 01..07 exactamente igual que la
+        tira de etapas del gestor, que va de 01 a 05. Dos escalas distintas con
+        la misma pinta: "03" era Materiales aquí y Rodaje allí. El número se ha
+        ido y en su sitio está la etapa, que es lo que sí comparten las dos
+        pantallas y lo que permite saber dónde estás.
+      */}
+      <nav className="phases" aria-label="Mesas de trabajo de la sala de producción">
         {PHASES.map((p) => {
           const state = PHASE_STATE[p.key];
           const dotClass = state === "done" ? "dot done" : state === "live" ? "dot live" : "dot";
           const allowed = allowedPhases.includes(p.key);
           const isCurrent = p.key === currentPhase;
+          const info = etapaDe(p.etapa);
+          const estilo = { ["--etapa" as string]: info.color };
+          const cuerpo = (
+            <>
+              <span className={dotClass}></span>
+              <span className="fase-etapa">
+                <span className="etapa-punto" />
+                {info.label}
+              </span>
+              <span className="plabel">{p.label}</span>
+            </>
+          );
+
           if (!allowed) {
             return (
-              <button key={p.key} className="phase" disabled title="Sin acceso para este perfil">
-                <span className={dotClass}></span>
-                <span className="num">{p.n}</span>
-                <span className="plabel">{p.label}</span>
+              <button
+                key={p.key}
+                className="phase"
+                style={estilo}
+                disabled
+                title="Sin acceso para este perfil"
+              >
+                {cuerpo}
               </button>
             );
           }
@@ -82,11 +121,10 @@ export function AppShell({
               key={p.key}
               href={`${basePath}/${p.key}`}
               className="phase"
+              style={estilo}
               aria-current={isCurrent ? "true" : undefined}
             >
-              <span className={dotClass}></span>
-              <span className="num">{p.n}</span>
-              <span className="plabel">{p.label}</span>
+              {cuerpo}
             </Link>
           );
         })}

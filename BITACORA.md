@@ -9,6 +9,99 @@ el relato con su fecha.
 
 ---
 
+## 2026-09-21 · MacBook · El calendario, y la frontera entre el gestor y la sala
+
+Sesión con dos frentes: uno de negocio y uno que resultó ser un fallo de diseño
+serio.
+
+### El contexto que manda
+
+El dueño de la empresa frena el gestor por considerarlo un salto
+desproporcionado. Lo único que pide es **ver los proyectos activos y quién
+trabaja en cada uno**. La consecuencia para lo que se construya a partir de
+ahora: prioridad a pantallas de SOLO LECTURA sobre datos que ya existen, y
+aparcar todo lo que obligue al equipo a mantener algo nuevo. La venta interna es
+"una ventana, no un proceso".
+
+### El fallo de base: dos navegaciones idénticas con escalas distintas
+
+Aitor reportó que en preproducción habían desaparecido el equipo externo, las
+convocatorias y las peticiones por perfil, y que la pantalla de rodaje era
+idéntica a la de preproducción. **No faltaba nada.** `ProjectMember`, `Person`,
+`Necesidad` (ARTE/VESTUARIO/CASTING/ÓPTICAS) y las jornadas con vista de cliente
+seguían enteras en `/p/[code]/...`.
+
+Lo que pasaba es que la ficha del gestor y la sala de producción pintaban su
+navegación **exactamente igual**: misma rejilla, mismo número grande de 22px,
+misma etiqueta mono. Pero una va de 01 a 05 (etapas de negocio) y la otra de 01 a
+07 (mesas de trabajo). "03" era Rodaje en una y Materiales en la otra. Quien
+construyó la herramienta pulsaba "03 Rodaje" en el gestor, se quedaba en la misma
+ficha y concluía que la sala no existía.
+
+Que se confundiera el autor es el dato: si le pasa a él, le pasa a todos.
+
+Lo arreglado:
+
+* **La tira de etapas del gestor ES la navegación del proyecto.** Cada etapa
+  lleva a su primera mesa de trabajo con acceso, y dice debajo qué hay dentro
+  ("Equipo · Preproducción · Materiales · Altas laborales"). Si la etapa tiene una
+  sola mesa que se llama igual que ella, enseña qué se hace dentro en vez de
+  repetirse.
+* **La sala pierde sus números** y hereda el color de la etapa a la que pertenece
+  cada mesa. La etapa es el único vocabulario que comparten las dos pantallas.
+  `PHASES` declara ahora su `etapa` y su `que`; `fasesDeEtapa()` y
+  `primeraFaseDeEtapa()` en `lib/phases.ts`.
+* **La puerta a la sala deja de ser una fila gris** idéntica a la de un documento
+  adjunto. Ahora es un bloque que lista las mesas de la etapa actual, una por una
+  y con su descripción.
+* **Volver a la ficha** desde cualquier mesa. Se deduce de `basePath` y no se pasa
+  como prop, porque las vistas de colaborador (`/f/[token]`) usan el mismo
+  armazón y no deben ver un enlace al gestor.
+* Bug de paso: `.phases` declaraba `repeat(6,1fr)` para siete fases. La séptima
+  llevaba tiempo cayendo a una segunda fila.
+
+### El calendario
+
+`/gestor?vista=calendario`, un interruptor junto al filtro de productora. **No
+sustituye al tablero de etapas**: quitarle al equipo su pantalla para dársela a
+dirección sería cambiar un problema por otro. Quien solo quiera el calendario se
+guarda esa URL y no ve nada más.
+
+Es una **línea de tiempo**, no una rejilla de mes. Una rejilla contesta "qué pasa
+el día 14", que es una pregunta de agenda personal; aquí la pregunta es "qué hay
+en marcha y quién lo lleva", y esa se lee por filas. Además un rodaje de cuatro
+días en una rejilla parece cuatro eventos sueltos, cuando es lo contrario.
+
+* Una fila por proyecto, agrupadas por etapa. Meses en horizontal, ventana de
+  mes / bimestre / trimestre, navegación por meses y línea de hoy.
+* **Los choques de rodaje se ven solos**: las franjas se alinean en vertical.
+  `choquesDeRodaje()` compara solo entre proyectos DISTINTOS —dos jornadas
+  seguidas del mismo rodaje no son un choque— y las marca con rayado, no solo con
+  color. Aviso arriba cuando hay alguno.
+* Tres carriles por fila: dos de fechas sueltas y uno de rodaje. Compartirlos
+  hacía que la etiqueta de una entrega cruzara una franja y la partiera a la
+  vista.
+* Geometría en `lib/calendario.ts`, en días UTC y porcentajes. Cero cambios de
+  esquema: todo sale de `Hito`, la misma tabla que ya alimenta las fichas. **No
+  hay calendario que sincronizar; es el mismo dato por el otro eje.**
+
+### Cómo se verificó
+
+No hay forma de entrar a la app sin credenciales, y no se piden. Se montó una
+ruta temporal con datos sintéticos —incluido un choque de rodaje a propósito—, se
+comprobó el render en el navegador y se borró antes de commitear.
+
+### Queda abierto
+
+* **Meter los proyectos reales.** Sigue siendo el cuello de botella: el tablero
+  tiene demos y los migrados cayeron todos en PREPRODUCCION. Una pantalla de
+  visibilidad con datos falsos es peor que ninguna ante un jefe predispuesto a
+  decir que no.
+* Vista por PERSONA (quién está libre, quién saturado). Es la siguiente pregunta
+  obvia, deliberadamente no construida.
+* El token de Slack sigue sin probarse contra Slack real.
+* Subida directa a Blob para archivos >4 MB; `Material` mantiene el techo.
+
 ## 2026-09-09 · MacBook · Los hitos se pueden dar por hechos
 
 Era lo que bloqueaba el calendario, y salió de un fallo de diseño detectado el

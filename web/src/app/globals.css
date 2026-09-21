@@ -465,3 +465,201 @@ details[open] > summary .chevron{transform:rotate(90deg)}
 .hito-fecha.u-hecho,.hito-proximo.u-hecho{
   border-color:var(--hair);color:var(--mist);text-decoration:line-through}
 .hito-proximo.u-hecho{text-decoration:none;border-style:solid}
+
+/* ---------- La frontera entre el gestor y la sala de producción ----------
+   Las dos tiras de navegación se pintaban idénticas —misma rejilla, mismos
+   números grandes— con escalas distintas: 01..05 las etapas de negocio,
+   01..07 las mesas de la sala. El resultado era que "03" significaba Rodaje
+   en una pantalla y Materiales en la otra. Aquí se separan visualmente: la
+   sala pierde sus números y hereda el color de la etapa a la que pertenece
+   cada mesa, que es el único vocabulario que comparten las dos pantallas. */
+
+/* Volver a la ficha desde cualquier mesa de trabajo. */
+.volver-ficha{
+  margin-right:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--smoke);border:1px solid var(--hair-strong);
+  padding:6px 10px;white-space:nowrap}
+.volver-ficha:hover{color:var(--ink);border-color:var(--ink)}
+
+/* Siete mesas, no seis: la séptima llevaba tiempo cayendo a una segunda fila. */
+.phases{grid-template-columns:repeat(7,1fr)}
+.phase .fase-etapa{
+  display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--mist)}
+.phase .fase-etapa .etapa-punto{position:static;width:7px;height:7px;background:var(--etapa);flex:none}
+.phase .plabel{margin-top:7px;color:var(--ink);font-weight:500;min-height:0}
+.phase[aria-current="true"] .fase-etapa{color:rgba(255,255,255,.74)}
+.phase[aria-current="true"] .fase-etapa .etapa-punto{background:var(--paper)}
+
+/* La tira de etapas del gestor: ahora es navegación, y tiene que parecerlo. */
+.etapa-paso .etapa-que{
+  display:block;margin-top:7px;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--mist);line-height:1.55}
+.etapa-paso.actual .etapa-que{color:rgba(255,255,255,.7)}
+.etapa-paso.navega{cursor:pointer;transition:background .14s ease}
+.etapa-paso.navega:hover{background:var(--bone)}
+.etapa-paso.navega.actual:hover{background:var(--etapa);filter:brightness(1.18)}
+.etapa-paso.navega::after{
+  content:"→";position:absolute;bottom:12px;right:12px;font-family:var(--mono);
+  font-size:12px;color:var(--mist);opacity:0;transition:opacity .14s ease}
+.etapa-paso.navega:hover::after{opacity:1}
+.etapa-paso.navega.actual::after{color:var(--paper)}
+
+/* La puerta a la sala, dentro de la ficha. Antes era una fila gris idéntica a
+   la de un documento adjunto; ahora enseña qué hay detrás antes de pulsar. */
+.sala-puerta{
+  border:1px solid var(--ink);border-left:4px solid var(--etapa);
+  margin-bottom:18px;background:var(--paper)}
+.sp-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--hair)}
+.sp-head h3{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.sp-etapa{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--paper);background:var(--etapa);padding:4px 8px}
+.sp-lead{padding:13px 16px 0;font-size:13px;color:var(--smoke);line-height:1.55;max-width:62ch}
+.mesas{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:1px;
+  background:var(--hair);margin:14px 16px 16px;border:1px solid var(--hair)}
+.mesa{display:block;background:var(--paper);padding:13px 14px;transition:background .14s ease}
+.mesa:hover{background:var(--bone)}
+.mesa-label{display:block;font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.02em}
+.mesa-que{
+  display:block;margin-top:5px;font-family:var(--mono);font-size:9px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--mist);line-height:1.55}
+
+@media (max-width:760px){
+  .phases{grid-template-columns:repeat(2,1fr)}
+  .etapas{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ---------- Calendario de proyectos ----------
+   Una fila por proyecto y el tiempo en horizontal. Es una línea de tiempo y no
+   una rejilla de mes porque la pregunta que contesta no es "qué pasa el día
+   14" sino "qué tenemos en marcha y quién lo lleva", y esa se lee por filas.
+   Dos rodajes que se pisan quedan alineados en vertical: el choque se ve sin
+   que nadie lo calcule. */
+
+.barra-vista{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.barra-vista .filtros{margin-bottom:16px}
+.vistas{display:flex;border:1px solid var(--hair-strong);margin-bottom:16px}
+.vista{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--smoke);padding:7px 14px;border-right:1px solid var(--hair-strong);white-space:nowrap}
+.vista:last-child{border-right:none}
+.vista:hover{color:var(--ink);background:var(--bone)}
+.vista.on{background:var(--ink);color:var(--paper)}
+
+.cal-mandos{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cal-nav{display:flex;align-items:center;gap:6px}
+.cal-paso,.cal-hoy-btn{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--smoke);border:1px solid var(--hair-strong);padding:6px 11px;line-height:1}
+.cal-paso:hover,.cal-hoy-btn:hover{border-color:var(--ink);color:var(--ink)}
+.ventanas{display:flex;border:1px solid var(--hair-strong)}
+.ventana{
+  font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--smoke);padding:6px 12px;border-right:1px solid var(--hair-strong)}
+.ventana:last-child{border-right:none}
+.ventana:hover{background:var(--bone);color:var(--ink)}
+.ventana.on{background:var(--ink);color:var(--paper)}
+
+.cal{overflow-x:auto;margin-bottom:22px}
+.cal-choque-aviso{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:#8a1f1f;border:1px solid #8a1f1f;padding:9px 12px;margin-bottom:12px;line-height:1.5}
+.cal-rejilla{min-width:840px;border:1px solid var(--hair)}
+.cal-fila{display:grid;grid-template-columns:232px 1fr;border-bottom:1px solid var(--hair)}
+.cal-fila:last-child{border-bottom:none}
+.cal-etiqueta{padding:9px 12px;border-right:1px solid var(--hair);min-width:0}
+.cal-pista{position:relative;overflow:hidden}
+
+.cal-cabecera{background:var(--bone);border-bottom:1px solid var(--ink)}
+.cal-cabecera .cal-pista{height:30px}
+.cal-mes{
+  position:absolute;top:0;height:100%;display:flex;align-items:center;padding-left:9px;
+  border-left:1px solid var(--hair-strong);font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--smoke)}
+
+.cal-grupo-titulo{background:var(--bone)}
+.cal-grupo-titulo .cal-etiqueta{
+  display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink);padding-top:7px;padding-bottom:7px}
+.cal-grupo-titulo .etapa-punto{width:7px;height:7px;background:var(--etapa);flex:none}
+.cal-cuenta{margin-left:auto;color:var(--mist)}
+
+/* Alto suficiente para tres carriles: dos de fechas sueltas y uno de rodaje.
+   Compartirlos hacía que la etiqueta de una entrega cruzara por encima de una
+   franja de rodaje y la partiera en dos a la vista. */
+.cal-proyecto{min-height:78px}
+.cal-proyecto .cal-etiqueta{display:flex;flex-direction:column;gap:3px;justify-content:center}
+.cal-logo{height:10px;width:auto;object-fit:contain;align-self:flex-start;opacity:.85}
+.cal-nombre{
+  font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.01em;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.cal-nombre:hover{text-decoration:underline;text-underline-offset:3px}
+.cal-cliente{
+  font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--mist);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-gente{display:flex;align-items:center;gap:3px;margin-top:2px;flex-wrap:wrap}
+.cal-persona{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;color:var(--smoke);
+  border:1px solid var(--hair-strong);padding:1px 4px;line-height:1.5}
+.cal-persona.lead{border-color:var(--ink);color:var(--ink);font-weight:700}
+.cal-sin-gente{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mist)}
+
+.cal-linea{position:absolute;top:0;bottom:0;width:1px;background:var(--hair)}
+.cal-hoy{position:absolute;top:0;bottom:0;width:1px;background:var(--ink);z-index:3}
+.cal-hoy::before{
+  content:"";position:absolute;top:0;left:-2px;width:5px;height:5px;background:var(--ink)}
+
+/* El rodaje ocupa la fila entera: esos días el equipo no está para otra cosa. */
+.cal-rodaje{
+  position:absolute;top:48px;bottom:8px;z-index:2;background:rgba(179,38,30,.13);
+  border:1px solid #b3261e;border-left-width:3px;display:flex;align-items:center;
+  padding-left:6px;overflow:hidden;min-width:5px}
+.cal-rodaje-txt{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:#8a1f1f;font-weight:700;white-space:nowrap}
+.cal-rodaje.hecho{background:rgba(17,17,17,.05);border-color:var(--hair-strong);border-left-color:var(--mist)}
+.cal-rodaje.hecho .cal-rodaje-txt{color:var(--mist);font-weight:400}
+/* Dos rodajes de proyectos distintos el mismo día: rayado, para que no se
+   confunda con un rodaje normal ni dependa solo del color. */
+.cal-rodaje.choca{
+  background:repeating-linear-gradient(45deg,rgba(179,38,30,.3) 0 5px,rgba(179,38,30,.1) 5px 10px);
+  border-width:2px;border-left-width:3px}
+
+.cal-hito{position:absolute;display:flex;align-items:center;gap:5px;z-index:4;pointer-events:none}
+.cal-hito .cal-marca{width:7px;height:7px;background:var(--smoke);flex:none}
+.cal-hito .cal-txt{
+  font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;color:var(--smoke);
+  white-space:nowrap;line-height:1}
+.cal-hito.izq{flex-direction:row-reverse;transform:translateX(-100%)}
+/* Dos carriles alternos: con dos o tres fechas por trimestre esto evita que las
+   etiquetas se pisen, sin inventar un algoritmo de colocación. */
+.cal-hito.carril-0{top:9px}
+.cal-hito.carril-1{top:28px}
+.cal-hito.u-vencido .cal-marca{background:#8a1f1f}
+.cal-hito.u-vencido .cal-txt{color:#8a1f1f;font-weight:700}
+.cal-hito.u-inminente .cal-marca{background:var(--ink)}
+.cal-hito.u-inminente .cal-txt{color:var(--ink);font-weight:700}
+.cal-hito.u-proximo .cal-marca{background:var(--ink)}
+.cal-hito.u-proximo .cal-txt{color:var(--ink)}
+.cal-hito.u-hecho .cal-marca{background:transparent;border:1px solid var(--hair-strong)}
+.cal-hito.u-hecho .cal-txt{color:var(--mist);text-decoration:line-through}
+
+.cal-leyenda{
+  display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-family:var(--mono);
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist)}
+.cal-leyenda span{display:flex;align-items:center;gap:6px}
+.cal-leyenda i{width:11px;height:8px;flex:none;display:block}
+.cal-leyenda .lg-rodaje{background:rgba(179,38,30,.13);border:1px solid #b3261e}
+.cal-leyenda .lg-choque{
+  background:repeating-linear-gradient(45deg,rgba(179,38,30,.3) 0 4px,rgba(179,38,30,.1) 4px 8px);
+  border:1px solid #b3261e}
+.cal-leyenda .lg-vencido{width:7px;height:7px;background:#8a1f1f}
+.cal-leyenda .lg-hecho{width:7px;height:7px;background:transparent;border:1px solid var(--hair-strong)}
+.cal-leyenda .lg-hoy{width:1px;height:12px;background:var(--ink)}
+
+/* Las etiquetas cruzan líneas de mes y franjas de rodaje; un fondo casi opaco
+   las mantiene legibles sin tapar lo que hay debajo. */
+.cal-hito .cal-txt{background:rgba(255,255,255,.9);padding:2px 3px}
+.cal-hito.u-hecho .cal-txt{background:rgba(255,255,255,.72)}
